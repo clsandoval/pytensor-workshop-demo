@@ -250,32 +250,37 @@ class YOLO11nHead:
         """Upsample using nearest neighbor (JAX-compatible)."""
         # x: (batch, C, H, W)
         # Use explicit reshaping to avoid dynamic shapes in JAX JIT
-        # This approach uses static shapes throughout
 
-        # Get static shape information
-        # For JAX compatibility, we expand dimensions explicitly
-        # Shape: (B, C, H, W) -> (B, C, H, 1, W, 1) -> (B, C, H, scale, W, scale)
-        # Then reshape to (B, C, H*scale, W*scale)
+        # Get input shape using pt.shape() for symbolic computation
+        input_shape = x.shape
+        batch_size = input_shape[0]
+        channels = input_shape[1]
+        height = input_shape[2]
+        width = input_shape[3]
 
-        # Add singleton dimensions for tiling
+        # Strategy: expand dims, tile, then rearrange and flatten
+        # (B, C, H, W) -> (B, C, H, 1, W, 1) -> (B, C, H, scale, W, scale)
+        # -> (B, C, H, W, scale, scale) -> (B, C, H*scale, W*scale)
+
+        # Step 1: Add singleton dimensions for tiling
         x_expanded = x.dimshuffle(0, 1, 2, "x", 3, "x")  # (B, C, H, 1, W, 1)
 
-        # Tile along the new dimensions
-        # pt.tile with explicit static repeat pattern
+        # Step 2: Tile along the new dimensions
         x_tiled = pt.tile(
             x_expanded, (1, 1, 1, scale, 1, scale)
         )  # (B, C, H, scale, W, scale)
 
-        # Reshape back to 4D by merging dimensions
-        # Use shape[i] to get symbolic shape, but operations are static
-        batch_size = x.shape[0]
-        channels = x.shape[1]
-        height = x.shape[2]
-        width = x.shape[3]
+        # Step 3: Rearrange to interleave dimensions
+        # (B, C, H, scale, W, scale) -> (B, C, H, W, scale, scale)
+        x_rearranged = x_tiled.dimshuffle(0, 1, 2, 4, 3, 5)
 
-        # Reshape: (B, C, H, scale, W, scale) -> (B, C, H*scale, W*scale)
-        x_upsampled = x_tiled.reshape(
-            (batch_size, channels, height * scale, width * scale)
+        # Step 4: Flatten last 4 dims to (B, C, H*scale, W*scale)
+        # Compute output shape from input shape
+        out_height = height * scale
+        out_width = width * scale
+
+        x_upsampled = x_rearranged.reshape(
+            (batch_size, channels, out_height, out_width)
         )
 
         return x_upsampled
