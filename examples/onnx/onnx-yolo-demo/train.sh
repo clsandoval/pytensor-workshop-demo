@@ -112,7 +112,10 @@ echo ""
 # CRITICAL: Set PyTensor flags BEFORE Python starts
 # This must happen in the shell, not inside Python
 export PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run"
+export JAX_PLATFORMS="cuda,cpu"
+export JAX_ENABLE_X64=False
 echo "PyTensor config: $PYTENSOR_FLAGS"
+echo "JAX platforms: $JAX_PLATFORMS"
 echo ""
 
 python train.py \

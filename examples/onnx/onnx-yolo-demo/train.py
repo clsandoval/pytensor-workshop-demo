@@ -44,6 +44,22 @@ if pytensor.config.floatX != "float32":
         f"Or use: bash train.sh"
     )
 
+# Configure PyTensor to use JAX backend for GPU acceleration
+try:
+    import jax
+
+    # Force JAX to use GPU
+    if len(jax.devices()) > 0 and str(jax.devices()[0]).startswith("Cuda"):
+        print(f"✓ JAX GPU detected: {jax.devices()}")
+        # Use JAX mode for compilation
+        pytensor.config.mode = "JAX"
+        print(f"✓ PyTensor mode set to: {pytensor.config.mode}")
+    else:
+        print(f"⚠ JAX devices: {jax.devices()} - no GPU detected, using CPU")
+except Exception as e:
+    print(f"⚠ Could not configure JAX backend: {e}")
+    print("  Training will use default CPU backend")
+
 
 def parse_args():
     """Parse command line arguments."""
