@@ -13,7 +13,6 @@ Usage:
 """
 
 import argparse
-import os
 import time
 from pathlib import Path
 
@@ -35,7 +34,6 @@ from pytensor import function, shared
 
 # Configure PyTensor to use JAX backend
 pytensor.config.floatX = "float32"
-os.environ["PYTENSOR_FLAGS"] = "device=cuda,floatX=float32,optimizer=fast_run"
 
 
 def parse_args():
@@ -217,6 +215,7 @@ class Trainer:
             v = shared(
                 np.zeros_like(param.get_value(), dtype="float32"),
                 name=f"{param.name}_velocity",
+                dtype="float32",
                 borrow=True,
             )
             velocities.append(v)

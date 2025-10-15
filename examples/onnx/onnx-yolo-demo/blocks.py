@@ -64,21 +64,25 @@ class ConvBNSiLU:
         self.gamma = shared(
             np.ones(out_channels, dtype="float32"),
             name=f"{name_prefix}_gamma",
+            dtype="float32",
             borrow=True,
         )
         self.beta = shared(
             np.zeros(out_channels, dtype="float32"),
             name=f"{name_prefix}_beta",
+            dtype="float32",
             borrow=True,
         )
         self.bn_mean = shared(
             np.zeros(out_channels, dtype="float32"),
             name=f"{name_prefix}_bn_mean",
+            dtype="float32",
             borrow=True,
         )
         self.bn_var = shared(
             np.ones(out_channels, dtype="float32"),
             name=f"{name_prefix}_bn_var",
+            dtype="float32",
             borrow=True,
         )
 
@@ -90,7 +94,7 @@ class ConvBNSiLU:
         fan_in = shape[1] * shape[2] * shape[3]  # in_channels * kh * kw
         std = np.sqrt(2.0 / fan_in)
         W_val = np.random.randn(*shape).astype("float32") * std
-        return shared(W_val, name=name, borrow=True)
+        return shared(W_val, name=name, dtype="float32", borrow=True)
 
     def __call__(self, x):
         """
