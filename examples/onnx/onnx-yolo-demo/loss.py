@@ -76,8 +76,8 @@ def yolo_loss(
 
     Parameters
     ----------
-    predictions : dict
-        Model predictions at 3 scales
+    predictions : tuple
+        Model predictions at 3 scales: (pred_p3, pred_p4, pred_p5)
         Each scale: (batch, 4+num_classes, H, W)
         Format: [x, y, w, h, class_0, class_1, ...]
     targets : dict
@@ -102,9 +102,12 @@ def yolo_loss(
     loss_dict : dict
         Individual loss components for logging
     """
+    # Unpack tuple predictions
+    _pred_p3, pred_p4, _pred_p5 = predictions
+
     # For simplicity, we'll compute loss on P4 scale (20x20 for 320x320 input)
     # Full implementation would use all 3 scales
-    pred_p4 = predictions["p4"]  # (batch, 4+C, 20, 20)
+    # pred_p4: (batch, 4+C, 20, 20)
 
     # Reshape predictions
     # (batch, 4+C, H, W) → (batch, H, W, 4+C)
@@ -175,8 +178,8 @@ def yolo_loss_with_targets(
 
     Parameters
     ----------
-    predictions : dict
-        Model predictions at 3 scales
+    predictions : tuple
+        Model predictions at 3 scales: (pred_p3, pred_p4, pred_p5)
     target_boxes : TensorVariable
         (batch, max_boxes, 4) normalized [x, y, w, h]
     target_classes : TensorVariable
@@ -196,8 +199,11 @@ def yolo_loss_with_targets(
     loss_dict : dict
         Individual loss components
     """
+    # Unpack tuple predictions
+    _pred_p3, pred_p4, _pred_p5 = predictions
+
     # Use P4 scale (20x20)
-    pred_p4 = predictions["p4"]  # (batch, 4+C, 20, 20)
+    # pred_p4: (batch, 4+C, 20, 20)
 
     # Reshape: (batch, 4+C, H, W) → (batch, H, W, 4+C)
     pred_p4 = pred_p4.dimshuffle(0, 2, 3, 1)

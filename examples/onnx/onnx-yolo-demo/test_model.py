@@ -102,8 +102,11 @@ def test_yolo11n_forward():
     # Build model
     _model, x, predictions = build_yolo11n(num_classes=2, input_size=320)
 
+    # predictions is now a tuple (pred_p3, pred_p4, pred_p5)
+    pred_p3, pred_p4, pred_p5 = predictions
+
     # Compile forward pass
-    f = function([x], [predictions["p3"], predictions["p4"], predictions["p5"]])
+    f = function([x], [pred_p3, pred_p4, pred_p5])
 
     # Test
     x_val = np.random.randn(2, 3, 320, 320).astype("float32")
@@ -127,8 +130,11 @@ def test_yolo11n_gradients():
     # Build model
     model, x, predictions = build_yolo11n(num_classes=2, input_size=320)
 
+    # predictions is now a tuple (pred_p3, pred_p4, pred_p5)
+    pred_p3, pred_p4, pred_p5 = predictions
+
     # Simple loss (just sum of outputs)
-    loss = predictions["p3"].sum() + predictions["p4"].sum() + predictions["p5"].sum()
+    loss = pred_p3.sum() + pred_p4.sum() + pred_p5.sum()
 
     # Compute gradients w.r.t. first few parameters
     test_params = model.params[:5]  # Just test first 5 params

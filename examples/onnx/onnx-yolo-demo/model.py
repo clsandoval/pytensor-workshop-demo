@@ -247,12 +247,38 @@ class YOLO11nHead:
         return det_p3, det_p4, det_p5
 
     def _upsample(self, x, scale=2):
-        """Upsample using nearest neighbor (repeat)."""
+        """Upsample using nearest neighbor (JAX-compatible)."""
         # x: (batch, C, H, W)
-        # Use repeat for upsampling
-        x_up = pt.repeat(x, scale, axis=2)  # Repeat height
-        x_up = pt.repeat(x_up, scale, axis=3)  # Repeat width
-        return x_up
+        # Use explicit reshaping to avoid dynamic shapes in JAX JIT
+        # This approach uses static shapes throughout
+
+        # Get static shape information
+        # For JAX compatibility, we expand dimensions explicitly
+        # Shape: (B, C, H, W) -> (B, C, H, 1, W, 1) -> (B, C, H, scale, W, scale)
+        # Then reshape to (B, C, H*scale, W*scale)
+
+        # Add singleton dimensions for tiling
+        x_expanded = x.dimshuffle(0, 1, 2, "x", 3, "x")  # (B, C, H, 1, W, 1)
+
+        # Tile along the new dimensions
+        # pt.tile with explicit static repeat pattern
+        x_tiled = pt.tile(
+            x_expanded, (1, 1, 1, scale, 1, scale)
+        )  # (B, C, H, scale, W, scale)
+
+        # Reshape back to 4D by merging dimensions
+        # Use shape[i] to get symbolic shape, but operations are static
+        batch_size = x.shape[0]
+        channels = x.shape[1]
+        height = x.shape[2]
+        width = x.shape[3]
+
+        # Reshape: (B, C, H, scale, W, scale) -> (B, C, H*scale, W*scale)
+        x_upsampled = x_tiled.reshape(
+            (batch_size, channels, height * scale, width * scale)
+        )
+
+        return x_upsampled
 
 
 class YOLO11n:

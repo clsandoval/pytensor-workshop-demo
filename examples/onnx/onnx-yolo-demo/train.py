@@ -512,14 +512,13 @@ class Trainer:
 
             onnx_path = Path(self.args.checkpoint_dir) / "yolo11n_best.onnx"
 
+            # predictions is now a tuple (pred_p3, pred_p4, pred_p5)
+            pred_p3, pred_p4, pred_p5 = self.predictions
+
             # Export model
             export_onnx(
                 inputs=[self.x],
-                outputs=[
-                    self.predictions["p3"],
-                    self.predictions["p4"],
-                    self.predictions["p5"],
-                ],
+                outputs=[pred_p3, pred_p4, pred_p5],
                 filename=str(onnx_path),
             )
 

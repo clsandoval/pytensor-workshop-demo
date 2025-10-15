@@ -36,7 +36,7 @@ def test_training_step():
     model, x, predictions = build_yolo11n(num_classes=2, input_size=320)
     print(f"  ✓ Model built with {len(model.params)} parameter tensors")
 
-    # Define loss
+    # Define loss (predictions is now a tuple)
     print("\n[2/6] Setting up loss function...")
     loss, loss_dict = yolo_loss(predictions, targets=None, num_classes=2)
     print("  ✓ Loss function defined")
