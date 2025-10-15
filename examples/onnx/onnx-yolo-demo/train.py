@@ -215,7 +215,6 @@ class Trainer:
             v = shared(
                 np.zeros_like(param.get_value(), dtype="float32"),
                 name=f"{param.name}_velocity",
-                dtype="float32",
                 borrow=True,
             )
             velocities.append(v)
