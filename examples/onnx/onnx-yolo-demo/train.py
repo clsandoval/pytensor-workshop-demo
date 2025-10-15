@@ -22,12 +22,12 @@ import numpy as np
 
 # WandB for experiment tracking
 import wandb
-from dataset import COCODataset, create_dataloader
-from loss import yolo_loss
+from tqdm import tqdm
 
 # Local imports
-from model import build_yolo11n
-from tqdm import tqdm
+from yolo.dataset import COCODataset, create_dataloader
+from yolo.loss import yolo_loss
+from yolo.model import build_yolo11n
 
 import pytensor
 import pytensor.tensor as pt

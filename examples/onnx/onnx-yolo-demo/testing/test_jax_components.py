@@ -28,6 +28,10 @@ import pytensor.tensor as pt
 from pytensor import function, shared
 
 
+# Add parent directory to path for imports
+sys.path.insert(0, "..")
+
+
 def setup_jax(enable_jax=False):
     """Setup JAX backend if requested."""
     if enable_jax:
@@ -184,7 +188,7 @@ def test_conv_bn_silu():
     print("-" * 70)
 
     try:
-        from blocks import ConvBNSiLU
+        from yolo.blocks import ConvBNSiLU
 
         conv = ConvBNSiLU(3, 16, kernel_size=3, stride=1, padding="same")
 
@@ -218,7 +222,7 @@ def test_bottleneck():
     print("-" * 70)
 
     try:
-        from blocks import Bottleneck
+        from yolo.blocks import Bottleneck
 
         bottleneck = Bottleneck(32, 32, shortcut=True, name_prefix="test")
 
@@ -252,7 +256,7 @@ def test_c3k2():
     print("-" * 70)
 
     try:
-        from blocks import C3k2
+        from yolo.blocks import C3k2
 
         c3k2 = C3k2(64, 64, n_blocks=1, name_prefix="test")
 
@@ -286,7 +290,7 @@ def test_sppf():
     print("-" * 70)
 
     try:
-        from blocks import SPPF
+        from yolo.blocks import SPPF
 
         sppf = SPPF(256, 256, pool_size=5, name_prefix="test")
 
@@ -320,7 +324,7 @@ def test_backbone():
     print("-" * 70)
 
     try:
-        from model import YOLO11nBackbone
+        from yolo.model import YOLO11nBackbone
 
         print("  Building backbone...")
         backbone = YOLO11nBackbone()
@@ -360,7 +364,7 @@ def test_head():
     print("-" * 70)
 
     try:
-        from model import YOLO11nHead
+        from yolo.model import YOLO11nHead
 
         print("  Building head...")
         head = YOLO11nHead(num_classes=2)
@@ -406,7 +410,7 @@ def test_full_model():
     print("-" * 70)
 
     try:
-        from model import build_yolo11n
+        from yolo.model import build_yolo11n
 
         print("  Building full model...")
         start_time = time.time()
@@ -454,8 +458,8 @@ def test_loss():
     print("-" * 70)
 
     try:
-        from loss import yolo_loss
-        from model import build_yolo11n
+        from yolo.loss import yolo_loss
+        from yolo.model import build_yolo11n
 
         print("  Building model and loss...")
         _model, x, predictions = build_yolo11n(num_classes=2, input_size=320)
@@ -492,8 +496,8 @@ def test_gradients():
     print("-" * 70)
 
     try:
-        from loss import yolo_loss
-        from model import build_yolo11n
+        from yolo.loss import yolo_loss
+        from yolo.model import build_yolo11n
 
         print("  Building model and loss...")
         model, x, predictions = build_yolo11n(num_classes=2, input_size=320)
@@ -541,8 +545,8 @@ def test_training_step():
     print("-" * 70)
 
     try:
-        from loss import yolo_loss
-        from model import build_yolo11n
+        from yolo.loss import yolo_loss
+        from yolo.model import build_yolo11n
 
         print("  Building model and loss...")
         model, x, predictions = build_yolo11n(num_classes=2, input_size=320)

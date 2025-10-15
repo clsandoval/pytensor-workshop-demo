@@ -8,16 +8,16 @@ import sys
 
 import numpy as np
 
-
-# Add parent directory to path for imports
-sys.path.insert(0, ".")
-
-from blocks import SPPF, C3k2, ConvBNSiLU
-from model import build_yolo11n
-
 import pytensor
 import pytensor.tensor as pt
 from pytensor import function
+
+
+# Add parent directory to path for imports
+sys.path.insert(0, "..")
+
+from yolo.blocks import SPPF, C3k2, ConvBNSiLU
+from yolo.model import build_yolo11n
 
 
 def test_conv_bn_silu():

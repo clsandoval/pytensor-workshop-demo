@@ -139,7 +139,8 @@ def test_full_yolo_model():
     """Test actual YOLO11n model with JAX."""
     print("\n[Test 5] Full YOLO11n model")
     try:
-        from model import build_yolo11n
+        sys.path.insert(0, "..")
+        from yolo.model import build_yolo11n
 
         _model, x, predictions = build_yolo11n(num_classes=2, input_size=320)
 
@@ -172,8 +173,9 @@ def test_training_step():
     """Test a single training step with gradients and updates."""
     print("\n[Test 6] Training step with gradients")
     try:
-        from loss import yolo_loss
-        from model import build_yolo11n
+        sys.path.insert(0, "..")
+        from yolo.loss import yolo_loss
+        from yolo.model import build_yolo11n
 
         from pytensor import shared
 
