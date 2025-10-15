@@ -2,15 +2,19 @@
 from pytensor.link.jax.dispatch.basic import jax_funcify, jax_typify
 
 # Load dispatch specializations
+import pytensor.link.jax.dispatch.batchnorm
 import pytensor.link.jax.dispatch.blas
 import pytensor.link.jax.dispatch.blockwise
+import pytensor.link.jax.dispatch.conv
 import pytensor.link.jax.dispatch.einsum
 import pytensor.link.jax.dispatch.elemwise
 import pytensor.link.jax.dispatch.extra_ops
 import pytensor.link.jax.dispatch.pad
 import pytensor.link.jax.dispatch.math
 import pytensor.link.jax.dispatch.nlinalg
+import pytensor.link.jax.dispatch.pool
 import pytensor.link.jax.dispatch.random
+import pytensor.link.jax.dispatch.resize
 import pytensor.link.jax.dispatch.scalar
 import pytensor.link.jax.dispatch.scan
 import pytensor.link.jax.dispatch.shape
