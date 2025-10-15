@@ -122,8 +122,8 @@ echo "✓ Directories created"
 if [ ! -f ".env" ]; then
     echo "Creating default .env file..."
     cat > .env << 'ENVEOF'
-# PyTensor Configuration
-PYTENSOR_FLAGS="device=cuda,floatX=float32,optimizer=fast_run"
+# PyTensor Configuration (JAX backend will auto-detect GPU)
+PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run"
 
 # JAX GPU Memory Configuration
 XLA_PYTHON_CLIENT_PREALLOCATE=true
