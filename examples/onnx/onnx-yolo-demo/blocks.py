@@ -90,8 +90,8 @@ class ConvBNSiLU:
     def _init_weight(self, shape, name):
         """He initialization."""
         fan_in = shape[1] * shape[2] * shape[3]  # in_channels * kh * kw
-        std = np.sqrt(2.0 / fan_in)
-        W_val = np.random.randn(*shape).astype("float32") * std
+        std = np.float32(np.sqrt(2.0 / fan_in))
+        W_val = (np.random.randn(*shape) * std).astype("float32")
         return shared(W_val, name=name, borrow=True)
 
     def __call__(self, x):
