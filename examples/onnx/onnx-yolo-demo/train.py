@@ -235,8 +235,11 @@ class Trainer:
         for param, grad, velocity in zip(
             self.model.params, self.grads, self.velocities
         ):
+            # Cast gradient to float32 to match parameter dtype
+            grad_f32 = pt.cast(grad, "float32")
+
             # Momentum update: v = momentum * v - lr * grad
-            v_new = momentum * velocity - lr * grad
+            v_new = momentum * velocity - lr * grad_f32
 
             # Weight decay
             if self.args.weight_decay > 0:
@@ -244,6 +247,10 @@ class Trainer:
 
             # Parameter update: param = param + v
             p_new = param + v_new
+
+            # Cast updates to ensure float32
+            v_new = pt.cast(v_new, "float32")
+            p_new = pt.cast(p_new, "float32")
 
             updates.append((velocity, v_new))
             updates.append((param, p_new))
