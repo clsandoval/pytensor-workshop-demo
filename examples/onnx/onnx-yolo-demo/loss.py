@@ -7,6 +7,12 @@ Implements:
 - Simplified target assignment for anchor-free detection
 """
 
+import os
+
+
+# Configure PyTensor BEFORE importing it
+os.environ.setdefault("PYTENSOR_FLAGS", "floatX=float32,optimizer=fast_run")
+
 import pytensor.tensor as pt
 
 

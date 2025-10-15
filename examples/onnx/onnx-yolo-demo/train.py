@@ -12,6 +12,12 @@ Usage:
     python train.py --epochs 100 --batch-size 8 --lr 0.01
 """
 
+import os
+
+
+# Configure PyTensor BEFORE importing it
+os.environ.setdefault("PYTENSOR_FLAGS", "floatX=float32,optimizer=fast_run")
+
 import argparse
 import time
 from pathlib import Path
@@ -30,10 +36,6 @@ from tqdm import tqdm
 import pytensor
 import pytensor.tensor as pt
 from pytensor import function, shared
-
-
-# Configure PyTensor to use JAX backend
-pytensor.config.floatX = "float32"
 
 
 def parse_args():

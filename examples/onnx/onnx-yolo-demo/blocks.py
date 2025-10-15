@@ -9,6 +9,12 @@ Implements:
 - C2PSA: CSP with Parallel Spatial Attention
 """
 
+import os
+
+
+# Configure PyTensor BEFORE importing it
+os.environ.setdefault("PYTENSOR_FLAGS", "floatX=float32,optimizer=fast_run")
+
 import numpy as np
 
 import pytensor.tensor as pt

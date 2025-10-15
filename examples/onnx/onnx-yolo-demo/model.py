@@ -6,6 +6,12 @@ Default input: (batch, 3, 320, 320)
 Output: Detection predictions at 3 scales
 """
 
+import os
+
+
+# Configure PyTensor BEFORE importing it
+os.environ.setdefault("PYTENSOR_FLAGS", "floatX=float32,optimizer=fast_run")
+
 from blocks import C2PSA, SPPF, C3k2, ConvBNSiLU
 
 import pytensor.tensor as pt
