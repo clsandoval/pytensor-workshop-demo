@@ -2460,6 +2460,58 @@ expit = sigmoid
 
 
 @scalar_elemwise
+def silu(x):
+    """
+    SiLU (Sigmoid Linear Unit) activation function, also known as Swish.
+
+    Formula: y = x * sigmoid(x) = x / (1 + exp(-x))
+
+    SiLU is a smooth, non-monotonic activation function that has been shown to
+    improve performance in deep neural networks compared to ReLU. It is used
+    extensively in modern architectures like EfficientNet, MobileNetV3, and YOLO.
+
+    Properties:
+    - Non-monotonic: Has a minimum around x ≈ -1.278
+    - Smooth everywhere (infinitely differentiable)
+    - Self-gated: Uses the input to gate itself via sigmoid
+    - Range: approximately (-0.278, ∞)
+    - Approaches identity for large positive x
+    - Approaches zero for large negative x
+
+    Parameters
+    ----------
+    x : tensor_like
+        Input tensor
+
+    Returns
+    -------
+    tensor
+        Element-wise SiLU activation: x * sigmoid(x)
+
+    Examples
+    --------
+    >>> import pytensor.tensor as pt
+    >>> x = pt.vector("x")
+    >>> y = pt.silu(x)
+    >>> f = pytensor.function([x], y)
+    >>> f([0.0, 1.0, 2.0])
+    array([0.        , 0.73105858, 1.76159416])
+
+    Notes
+    -----
+    SiLU was proposed in:
+    - Hendrycks & Gimpel (2016). "Gaussian Error Linear Units (GELUs)"
+    - Ramachandran et al. (2017). "Searching for Activation Functions"
+
+    The name "Swish" comes from the Google Brain team's independent discovery.
+    """
+
+
+# Alias for Swish (same function, different name)
+swish = silu
+
+
+@scalar_elemwise
 def softplus(x):
     """Compute log(1 + exp(x)), also known as softplus or log1pexp"""
 
@@ -4291,6 +4343,7 @@ __all__ = [
     "sgn",
     "sigmoid",
     "sign",
+    "silu",
     "sin",
     "sinh",
     "smallest",
@@ -4302,6 +4355,7 @@ __all__ = [
     "std",
     "sub",
     "sum",
+    "swish",
     "tan",
     "tanh",
     "tensordot",

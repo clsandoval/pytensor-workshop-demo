@@ -1318,6 +1318,83 @@ class Softplus(UnaryScalarOp):
 softplus = Softplus(upgrade_to_float, name="scalar_softplus")
 
 
+class SiLU(UnaryScalarOp):
+    """
+    SiLU (Sigmoid Linear Unit) activation function.
+
+    Also known as Swish activation.
+
+    Formula: y = x * sigmoid(x) = x / (1 + exp(-x))
+
+    Properties:
+    - Smooth and non-monotonic
+    - Self-gated (gates input with its own sigmoid)
+    - Superior to ReLU for deep networks
+    - Used in modern architectures (EfficientNet, YOLO11n, etc.)
+
+    References
+    ----------
+    .. [1] Ramachandran et al., "Searching for Activation Functions", 2017
+           https://arxiv.org/abs/1710.05941
+    """
+
+    nfunc_spec = None  # No direct NumPy equivalent
+
+    def impl(self, x):
+        """Python/NumPy implementation of SiLU."""
+        # Handle int8/uint8 to avoid float16 computation
+        x_dtype = str(getattr(x, "dtype", ""))
+        if x_dtype in ("int8", "uint8"):
+            x = np.asarray(x, dtype=np.float32)
+
+        # SiLU: x * sigmoid(x) = x / (1 + exp(-x))
+        # Use numerically stable implementation
+        return x / (1.0 + np.exp(-x))
+
+    def grad(self, inp, grads):
+        """
+        Gradient of SiLU.
+
+        d/dx[x * sigmoid(x)] = sigmoid(x) + x * sigmoid(x) * (1 - sigmoid(x))
+                              = sigmoid(x) * (1 + x * (1 - sigmoid(x)))
+        """
+        (x,) = inp
+        (gz,) = grads
+
+        sig_x = sigmoid(x)
+        # Gradient: sigmoid(x) * (1 + x * (1 - sigmoid(x)))
+        rval = gz * sig_x * (1 + x * (1 - sig_x))
+
+        assert rval.type.dtype.find("float") != -1
+        return [rval]
+
+    def c_code(self, node, name, inp, out, sub):
+        """C implementation of SiLU."""
+        (x,) = inp
+        (z,) = out
+
+        if node.inputs[0].type in float_types:
+            # SiLU: x / (1 + exp(-x))
+            if node.inputs[0].type == float64:
+                return f"""{z} = {x} / (1.0 + exp(-{x}));"""
+            else:  # float32
+                return f"""{z} = {x} / (1.0f + expf(-{x}));"""
+        else:
+            raise NotImplementedError("SiLU only implemented for floating point")
+
+    def c_code_cache_version(self):
+        """Version for C code caching."""
+        v = super().c_code_cache_version()
+        if v:
+            return (1, *v)
+        else:
+            return v
+
+
+# Create instance
+silu = SiLU(upgrade_to_float, name="silu")
+
+
 class Log1mexp(UnaryScalarOp):
     r"""
     Compute log(1 - exp(x)), also known as log1mexp

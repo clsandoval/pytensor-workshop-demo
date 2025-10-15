@@ -168,3 +168,86 @@ def test_psi(linker):
 
     np.testing.assert_allclose(fn(x_test), scipy.special.psi(x_test))
     np.testing.assert_allclose(fn(-x_test), scipy.special.psi(-x_test))
+
+
+# SiLU/Swish activation tests
+def test_silu_scalar_basic():
+    """
+    Test basic SiLU scalar operation.
+
+    SiLU formula: y = x * sigmoid(x)
+              = x / (1 + exp(-x))
+
+    Properties:
+    - Non-monotonic (has a minimum around x = -1.278)
+    - Smooth everywhere (differentiable)
+    - Range: approximately (-0.278, ∞)
+    - Superior to ReLU for deep networks
+    """
+    import pytensor.scalar as ps
+    from pytensor.scalar.math import silu
+
+    x = ps.float32("x")
+    y = silu(x)
+
+    # Compile scalar function
+    f = function([x], y)
+
+    # Test values
+    test_values = [-2.0, -1.0, 0.0, 1.0, 2.0]
+
+    for x_val in test_values:
+        result = f(x_val)
+        # Manual calculation: x * sigmoid(x)
+        sigmoid_x = 1.0 / (1.0 + np.exp(-x_val))
+        expected = x_val * sigmoid_x
+
+        np.testing.assert_allclose(result, expected, rtol=1e-5)
+
+
+def test_silu_scalar_gradient():
+    """
+    Test SiLU gradient computation.
+
+    SiLU gradient: dy/dx = sigmoid(x) + x * sigmoid(x) * (1 - sigmoid(x))
+                         = sigmoid(x) * (1 + x * (1 - sigmoid(x)))
+
+    This test verifies automatic differentiation works correctly.
+    """
+    import pytensor.scalar as ps
+    from pytensor.scalar.math import silu
+
+    x = ps.float32("x")
+    y = silu(x)
+
+    # Compute gradient
+    dy_dx = pt.grad(y, x)
+
+    # Compile
+    f_grad = function([x], dy_dx)
+
+    # Test gradient at x = 1.0
+    x_val = 1.0
+    grad_result = f_grad(x_val)
+
+    # Manual calculation
+    sigmoid_x = 1.0 / (1.0 + np.exp(-x_val))
+    expected_grad = sigmoid_x * (1 + x_val * (1 - sigmoid_x))
+
+    np.testing.assert_allclose(grad_result, expected_grad, rtol=1e-5)
+
+
+def test_silu_scalar_edge_cases():
+    """Test SiLU with edge cases (extreme values)."""
+    import pytensor.scalar as ps
+    from pytensor.scalar.math import silu
+
+    x = ps.float32("x")
+    y = silu(x)
+
+    f = function([x], y)
+
+    # Edge cases
+    assert np.isfinite(f(-100.0))  # Large negative
+    assert np.isfinite(f(100.0))  # Large positive
+    assert np.isclose(f(0.0), 0.0, atol=1e-6)  # Zero input

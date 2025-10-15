@@ -134,6 +134,8 @@ from pytensor.tensor.interpolate import interp, interpolate1d
 from pytensor.tensor.io import *
 from pytensor.tensor.math import *
 from pytensor.tensor.pad import pad
+from pytensor.tensor.pool import pool_2d
+from pytensor.tensor.resize import resize
 from pytensor.tensor.shape import (
     reshape,
     shape,

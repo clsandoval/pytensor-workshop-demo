@@ -3867,3 +3867,60 @@ def test_median(ndim, axis):
 
     assert np.allclose(result_odd, expected_odd)
     assert np.allclose(result_even, expected_even)
+
+
+# SiLU/Swish activation tests
+def test_silu_tensor_basic():
+    """
+    Test SiLU tensor operation.
+
+    SiLU formula: y = x * sigmoid(x)
+
+    This test verifies that the tensor wrapper correctly applies
+    the scalar SiLU operation element-wise across tensors.
+    """
+    import pytensor.tensor as pt
+
+    x = pt.vector("x", dtype="float32")
+    y = pt.silu(x)
+
+    f = function([x], y)
+
+    # Test values
+    x_val = np.array([-2.0, -1.0, 0.0, 1.0, 2.0], dtype="float32")
+    result = f(x_val)
+
+    # Expected: x * sigmoid(x)
+    sigmoid_x = 1.0 / (1.0 + np.exp(-x_val))
+    expected = x_val * sigmoid_x
+
+    np.testing.assert_allclose(result, expected, rtol=1e-5)
+
+
+def test_silu_swish_alias():
+    """
+    Test that swish is an alias for silu.
+
+    Both functions should produce identical results.
+    """
+    import pytensor.tensor as pt
+
+    x = pt.vector("x", dtype="float32")
+    y_silu = pt.silu(x)
+    y_swish = pt.swish(x)
+
+    f_silu = function([x], y_silu)
+    f_swish = function([x], y_swish)
+
+    x_val = np.array([-1.0, 0.0, 1.0, 2.0], dtype="float32")
+
+    result_silu = f_silu(x_val)
+    result_swish = f_swish(x_val)
+
+    # They should be identical
+    np.testing.assert_allclose(result_silu, result_swish, rtol=1e-7)
+
+    # And both should equal x * sigmoid(x)
+    sigmoid_x = 1.0 / (1.0 + np.exp(-x_val))
+    expected = x_val * sigmoid_x
+    np.testing.assert_allclose(result_silu, expected, rtol=1e-5)
