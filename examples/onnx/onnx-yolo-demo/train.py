@@ -214,8 +214,10 @@ class Trainer:
         """Initialize SGD with momentum optimizer."""
         velocities = []
         for param in self.model.params:
+            # Match velocity dtype to parameter dtype
+            param_val = param.get_value()
             v = shared(
-                np.zeros_like(param.get_value(), dtype="float32"),
+                np.zeros_like(param_val, dtype=param_val.dtype),
                 name=f"{param.name}_velocity",
                 borrow=True,
             )
@@ -227,19 +229,20 @@ class Trainer:
         # Parameter updates with SGD + momentum
         updates = []
 
-        # Cast hyperparameters to float32 to avoid dtype promotion
-        momentum = np.float32(self.args.momentum)
-        lr = np.float32(self.args.lr)
-        weight_decay = np.float32(self.args.weight_decay)
-
         for param, grad, velocity in zip(
             self.model.params, self.grads, self.velocities
         ):
-            # Cast gradient to float32 to match parameter dtype
-            grad_f32 = pt.cast(grad, "float32")
+            # Cast to parameter's dtype to ensure compatibility
+            param_dtype = param.dtype
+            grad_casted = pt.cast(grad, param_dtype)
+
+            # Cast hyperparameters to match parameter dtype
+            momentum = pt.cast(self.args.momentum, param_dtype)
+            lr = pt.cast(self.args.lr, param_dtype)
+            weight_decay = pt.cast(self.args.weight_decay, param_dtype)
 
             # Momentum update: v = momentum * v - lr * grad
-            v_new = momentum * velocity - lr * grad_f32
+            v_new = momentum * velocity - lr * grad_casted
 
             # Weight decay
             if self.args.weight_decay > 0:
@@ -247,10 +250,6 @@ class Trainer:
 
             # Parameter update: param = param + v
             p_new = param + v_new
-
-            # Cast updates to ensure float32
-            v_new = pt.cast(v_new, "float32")
-            p_new = pt.cast(p_new, "float32")
 
             updates.append((velocity, v_new))
             updates.append((param, p_new))
