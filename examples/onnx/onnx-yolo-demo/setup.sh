@@ -6,6 +6,9 @@
 
 set -e  # Exit on any error
 
+# CRITICAL: Set PyTensor flags BEFORE any Python/PyTensor imports
+export PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run"
+
 echo "=========================================="
 echo "YOLO11n Training Environment Setup"
 echo "=========================================="

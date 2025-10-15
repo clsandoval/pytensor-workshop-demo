@@ -109,6 +109,12 @@ echo "Starting Training..."
 echo "=========================================="
 echo ""
 
+# CRITICAL: Set PyTensor flags BEFORE Python starts
+# This must happen in the shell, not inside Python
+export PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run"
+echo "PyTensor config: $PYTENSOR_FLAGS"
+echo ""
+
 python train.py \
     --epochs $EPOCHS \
     --batch-size $BATCH_SIZE \
