@@ -54,6 +54,8 @@ dependencies = [
     "logical-unification",
     "miniKanren",
     "cons",
+    "hypothesis>=6.140.4",
+    "scikit-learn>=1.7.2",
 ]
 
 [project.urls]
@@ -66,7 +68,7 @@ documentation = "https://pytensor.readthedocs.io/en/latest/"
 pytensor-cache = "pytensor.bin.pytensor_cache:main"
 
 [project.optional-dependencies]
-complete = ["pytensor[jax]", "pytensor[numba]"]
+complete = ["pytensor[jax]", "pytensor[numba]", "pytensor[onnx]"]
 development = ["pytensor[complete]", "pytensor[tests]", "pytensor[rtd]"]
 tests = [
     "pytest",
@@ -76,10 +78,15 @@ tests = [
     "pytest-benchmark",
     "pytest-mock",
     "pytest-sphinx",
+    "hypothesis>=6.100.0",
 ]
 rtd = ["sphinx>=5.1.0,<6", "pygments", "pydot"]
 jax = ["jax", "jaxlib"]
 numba = ["numba>=0.57", "llvmlite"]
+onnx = [
+    "onnx>=1.14.0",
+    "onnxruntime>=1.16.0", # For validation/testing
+]
 
 [tool.setuptools.packages.find]
 include = ["pytensor*"]
@@ -158,6 +165,19 @@ lines-after-imports = 2
 "tests/link/numba/test_performance.py" = ["E402"]
 "tests/link/numba/test_sparse.py" = ["E402"]
 "tests/link/numba/test_tensor_basic.py" = ["E402"]
+"tests/link/onnx/test_basic.py" = ["E402"]
+"tests/link/onnx/test_batchnorm.py" = ["E402"]
+"tests/link/onnx/test_conv.py" = ["E402"]
+"tests/link/onnx/test_elemwise.py" = ["E402"]
+"tests/link/onnx/test_join.py" = ["E402"]
+"tests/link/onnx/test_nlinalg.py" = ["E402"]
+"tests/link/onnx/test_pool.py" = ["E402"]
+"tests/link/onnx/test_properties.py" = ["E402"]
+"tests/link/onnx/test_regressions.py" = ["E402"]
+"tests/link/onnx/test_resize.py" = ["E402"]
+"tests/link/onnx/test_shape.py" = ["E402"]
+"tests/link/onnx/test_special.py" = ["E402"]
+"examples/**/*.py" = ["T201"]
 "tests/tensor/test_math_scipy.py" = ["E402"]
 "tests/sparse/test_basic.py" = ["E402"]
 "tests/sparse/test_sp2.py" = ["E402"]

@@ -1,0 +1,11 @@
+# Ignore Python files
+*.py
+*.pyc
+__pycache__/
+
+# Ignore documentation
+*.md
+
+# Only include the HTML and ONNX model
+!cnn_model_webgpu_demo.html
+!cnn_model.onnx
