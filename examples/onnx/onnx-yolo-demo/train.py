@@ -54,9 +54,10 @@ try:
 
     if device_type == "gpu":
         print(f"✓ JAX GPU detected: {devices}")
-        # Use JAX mode for compilation
+        # Use JAX mode for compilation (now with fixed batch normalization)
         pytensor.config.mode = "JAX"
         print(f"✓ PyTensor mode set to: {pytensor.config.mode}")
+        print("✓ GPU acceleration enabled with JAX-compatible batch normalization")
     else:
         print(f"⚠ JAX device platform: {device_type} - expected 'gpu'")
         print(f"⚠ Devices: {devices}")

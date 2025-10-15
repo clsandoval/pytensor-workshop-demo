@@ -15,9 +15,50 @@ import numpy as np
 
 import pytensor.tensor as pt
 from pytensor import shared
-from pytensor.tensor.batchnorm import batch_normalization
 from pytensor.tensor.conv.abstract_conv import conv2d
 from pytensor.tensor.pool import pool_2d
+
+
+def jax_compatible_batch_norm(x, gamma, beta, mean, var, epsilon=1e-5):
+    """
+    JAX-compatible batch normalization implementation.
+
+    Avoids dynamic shape operations that cause issues with JAX JIT compilation.
+
+    Parameters
+    ----------
+    x : TensorVariable
+        Input (batch, channels, height, width)
+    gamma : TensorVariable
+        Scale parameter (channels,)
+    beta : TensorVariable
+        Shift parameter (channels,)
+    mean : TensorVariable
+        Running mean (channels,)
+    var : TensorVariable
+        Running variance (channels,)
+    epsilon : float
+        Small constant for numerical stability
+
+    Returns
+    -------
+    TensorVariable
+        Normalized output with same shape as input
+    """
+    # Reshape gamma, beta, mean, var to (1, C, 1, 1) for broadcasting
+    # This avoids dynamic shape operations
+    gamma_bc = gamma.dimshuffle("x", 0, "x", "x")
+    beta_bc = beta.dimshuffle("x", 0, "x", "x")
+    mean_bc = mean.dimshuffle("x", 0, "x", "x")
+    var_bc = var.dimshuffle("x", 0, "x", "x")
+
+    # Normalize: (x - mean) / sqrt(var + eps)
+    x_normalized = (x - mean_bc) / pt.sqrt(var_bc + epsilon)
+
+    # Scale and shift: gamma * x_norm + beta
+    out = gamma_bc * x_normalized + beta_bc
+
+    return out
 
 
 class ConvBNSiLU:
@@ -127,8 +168,8 @@ class ConvBNSiLU:
             filter_flip=False,
         )
 
-        # BatchNorm
-        bn_out = batch_normalization(
+        # BatchNorm (JAX-compatible)
+        bn_out = jax_compatible_batch_norm(
             conv_out, self.gamma, self.beta, self.bn_mean, self.bn_var, epsilon=1e-5
         )
 
