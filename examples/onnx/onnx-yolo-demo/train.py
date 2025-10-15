@@ -49,13 +49,18 @@ try:
     import jax
 
     # Force JAX to use GPU
-    if len(jax.devices()) > 0 and str(jax.devices()[0]).startswith("Cuda"):
-        print(f"✓ JAX GPU detected: {jax.devices()}")
+    devices = jax.devices()
+    device_type = devices[0].platform if len(devices) > 0 else "none"
+
+    if device_type == "gpu":
+        print(f"✓ JAX GPU detected: {devices}")
         # Use JAX mode for compilation
         pytensor.config.mode = "JAX"
         print(f"✓ PyTensor mode set to: {pytensor.config.mode}")
     else:
-        print(f"⚠ JAX devices: {jax.devices()} - no GPU detected, using CPU")
+        print(f"⚠ JAX device platform: {device_type} - expected 'gpu'")
+        print(f"⚠ Devices: {devices}")
+        print("  Training will use default CPU backend")
 except Exception as e:
     print(f"⚠ Could not configure JAX backend: {e}")
     print("  Training will use default CPU backend")
