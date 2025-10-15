@@ -2708,8 +2708,15 @@ class AbstractConv2d(AbstractConv):
         # Make sure that the broadcastable pattern of the inputs is used
         # for the gradients, even if the grad opts are not able to infer
         # that the dimensions are broadcastable.
+        # Also handle dtype conversion if needed (e.g., for mixed precision)
+        if d_bottom.type.dtype != bottom.type.dtype:
+            d_bottom = d_bottom.astype(bottom.type.dtype)
         d_bottom = bottom.type.filter_variable(d_bottom)
+
+        if d_weights.type.dtype != weights.type.dtype:
+            d_weights = d_weights.astype(weights.type.dtype)
         d_weights = weights.type.filter_variable(d_weights)
+
         return d_bottom, d_weights
 
 
@@ -2836,7 +2843,8 @@ class AbstractConv_gradWeights(BaseAbstractConv):
                 (None,) * self.convdim
             )
         out_shape = tuple(1 if s == 1 else None for s in out_shape)
-        output = img.type.clone(shape=out_shape)()
+        # Gradient dtype should match topgrad (upstream gradient), not img
+        output = img.type.clone(dtype=topgrad.dtype, shape=out_shape)()
         return Apply(self, [img, topgrad, shape], [output])
 
     def perform(self, node, inp, out_):
@@ -3205,7 +3213,8 @@ class AbstractConv_gradInputs(BaseAbstractConv):
                 (None,) * self.convdim
             )
         out_shape = tuple(1 if s == 1 else None for s in out_shape)
-        output = kern.type.clone(shape=out_shape)()
+        # Gradient dtype should match topgrad (upstream gradient), not kern
+        output = kern.type.clone(dtype=topgrad.dtype, shape=out_shape)()
         return Apply(self, [kern, topgrad, shape], [output])
 
     def perform(self, node, inp, out_):
