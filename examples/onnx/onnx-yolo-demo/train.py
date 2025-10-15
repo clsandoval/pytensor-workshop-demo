@@ -227,15 +227,20 @@ class Trainer:
         # Parameter updates with SGD + momentum
         updates = []
 
+        # Cast hyperparameters to float32 to avoid dtype promotion
+        momentum = np.float32(self.args.momentum)
+        lr = np.float32(self.args.lr)
+        weight_decay = np.float32(self.args.weight_decay)
+
         for param, grad, velocity in zip(
             self.model.params, self.grads, self.velocities
         ):
             # Momentum update: v = momentum * v - lr * grad
-            v_new = self.args.momentum * velocity - self.args.lr * grad
+            v_new = momentum * velocity - lr * grad
 
             # Weight decay
             if self.args.weight_decay > 0:
-                v_new = v_new - self.args.lr * self.args.weight_decay * param
+                v_new = v_new - lr * weight_decay * param
 
             # Parameter update: param = param + v
             p_new = param + v_new
