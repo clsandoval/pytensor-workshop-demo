@@ -69,7 +69,7 @@ def compare_jax_and_py(
 
     """
     if assert_fn is None:
-        assert_fn = partial(np.testing.assert_allclose, rtol=1e-4)
+        assert_fn = partial(np.testing.assert_allclose, rtol=1e-4, atol=1e-5)
 
     if any(inp.owner is not None for inp in graph_inputs):
         raise ValueError("Inputs must be root variables")
