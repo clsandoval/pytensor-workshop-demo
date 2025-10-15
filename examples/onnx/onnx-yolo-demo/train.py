@@ -234,14 +234,17 @@ class Trainer:
         # Parameter updates with SGD + momentum
         updates = []
 
-        # Hyperparameters as float32 scalars
-        momentum = np.float32(self.args.momentum)
-        lr = np.float32(self.args.lr)
-        weight_decay = np.float32(self.args.weight_decay)
+        # Hyperparameters as PyTensor scalars with explicit float32 dtype
+        momentum = pt.as_tensor_variable(np.float32(self.args.momentum))
+        lr = pt.as_tensor_variable(np.float32(self.args.lr))
+        weight_decay = pt.as_tensor_variable(np.float32(self.args.weight_decay))
 
         for param, grad, velocity in zip(
             self.model.params, self.grads, self.velocities
         ):
+            # Cast gradient to float32 to match parameters
+            grad = pt.cast(grad, "float32")
+
             # Momentum update: v = momentum * v - lr * grad
             v_new = momentum * velocity - lr * grad
 
