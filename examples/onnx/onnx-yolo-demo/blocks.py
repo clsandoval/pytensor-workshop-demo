@@ -7,13 +7,9 @@ Implements:
 - C3k2: CSP bottleneck with 2 convolutions
 - SPPF: Spatial Pyramid Pooling - Fast
 - C2PSA: CSP with Parallel Spatial Attention
+
+IMPORTANT: Set PYTENSOR_FLAGS='floatX=float32' before importing this module!
 """
-
-import os
-
-
-# Configure PyTensor BEFORE importing it
-os.environ.setdefault("PYTENSOR_FLAGS", "floatX=float32,optimizer=fast_run")
 
 import numpy as np
 

@@ -145,7 +145,15 @@ else
 fi
 echo ""
 
+# Clean Python cache to ensure float32 config takes effect
+echo ""
+echo "Cleaning Python cache..."
+find ../../../ -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find ../../../ -type f -name "*.pyc" -delete 2>/dev/null || true
+echo "✓ Cache cleaned"
+
 # Login to WandB (optional, can be done later)
+echo ""
 echo "=========================================="
 echo "Setup Complete!"
 echo "=========================================="

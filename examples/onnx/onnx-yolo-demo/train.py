@@ -9,14 +9,10 @@ Features:
 - JAX backend for GPU acceleration
 
 Usage:
-    python train.py --epochs 100 --batch-size 8 --lr 0.01
+    PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run" python train.py --epochs 100 --batch-size 8 --lr 0.01
+
+IMPORTANT: PYTENSOR_FLAGS must be set BEFORE running this script!
 """
-
-import os
-
-
-# Configure PyTensor BEFORE importing it
-os.environ.setdefault("PYTENSOR_FLAGS", "floatX=float32,optimizer=fast_run")
 
 import argparse
 import time
@@ -36,6 +32,17 @@ from tqdm import tqdm
 import pytensor
 import pytensor.tensor as pt
 from pytensor import function, shared
+
+
+# Verify float32 configuration
+if pytensor.config.floatX != "float32":
+    raise RuntimeError(
+        f"ERROR: PyTensor floatX is '{pytensor.config.floatX}' but must be 'float32' for ONNX export!\n"
+        f"Set environment variable BEFORE running:\n"
+        f"  export PYTENSOR_FLAGS='floatX=float32,optimizer=fast_run'\n"
+        f"  python train.py ...\n"
+        f"Or use: bash train.sh"
+    )
 
 
 def parse_args():
@@ -214,10 +221,8 @@ class Trainer:
         """Initialize SGD with momentum optimizer."""
         velocities = []
         for param in self.model.params:
-            # Match velocity dtype to parameter dtype
-            param_val = param.get_value()
             v = shared(
-                np.zeros_like(param_val, dtype=param_val.dtype),
+                np.zeros_like(param.get_value(), dtype="float32"),
                 name=f"{param.name}_velocity",
                 borrow=True,
             )
@@ -229,20 +234,16 @@ class Trainer:
         # Parameter updates with SGD + momentum
         updates = []
 
+        # Hyperparameters as float32 scalars
+        momentum = np.float32(self.args.momentum)
+        lr = np.float32(self.args.lr)
+        weight_decay = np.float32(self.args.weight_decay)
+
         for param, grad, velocity in zip(
             self.model.params, self.grads, self.velocities
         ):
-            # Cast to parameter's dtype to ensure compatibility
-            param_dtype = param.dtype
-            grad_casted = pt.cast(grad, param_dtype)
-
-            # Cast hyperparameters to match parameter dtype
-            momentum = pt.cast(self.args.momentum, param_dtype)
-            lr = pt.cast(self.args.lr, param_dtype)
-            weight_decay = pt.cast(self.args.weight_decay, param_dtype)
-
             # Momentum update: v = momentum * v - lr * grad
-            v_new = momentum * velocity - lr * grad_casted
+            v_new = momentum * velocity - lr * grad
 
             # Weight decay
             if self.args.weight_decay > 0:

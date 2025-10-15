@@ -5,13 +5,9 @@ Implements:
 - IoU-based box regression loss
 - Binary cross-entropy classification loss
 - Simplified target assignment for anchor-free detection
+
+IMPORTANT: Set PYTENSOR_FLAGS='floatX=float32' before importing this module!
 """
-
-import os
-
-
-# Configure PyTensor BEFORE importing it
-os.environ.setdefault("PYTENSOR_FLAGS", "floatX=float32,optimizer=fast_run")
 
 import pytensor.tensor as pt
 
