@@ -130,6 +130,39 @@ class Resize(Op):
 
         return [(batch, channels, out_height, out_width)]
 
+    def grad(self, inputs, output_grads):
+        """Compute gradient of resize operation.
+
+        The gradient of resize is implemented by applying the inverse scale factor:
+        - If forward was upsample (scale > 1), gradient is downsample (scale < 1)
+        - If forward was downsample (scale < 1), gradient is upsample (scale > 1)
+
+        Parameters
+        ----------
+        inputs : list
+            List containing the input tensor x
+        output_grads : list
+            List containing the gradient with respect to the output
+
+        Returns
+        -------
+        list
+            List containing the gradient with respect to the input
+        """
+        (_x,) = inputs
+        (gz,) = output_grads
+
+        # Inverse scale factors for gradient
+        scale_h, scale_w = self.scale_factor
+        inv_scale_h = 1.0 / scale_h
+        inv_scale_w = 1.0 / scale_w
+
+        # Apply resize with inverse scale to get gradient
+        # Use same mode as forward pass
+        grad_x = Resize(scale_factor=(inv_scale_h, inv_scale_w), mode=self.mode)(gz)
+
+        return [grad_x]
+
 
 def resize(input, scale_factor, mode="nearest"):
     """
