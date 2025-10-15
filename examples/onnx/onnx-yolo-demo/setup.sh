@@ -28,11 +28,19 @@ echo ""
 
 # Check Python version
 echo "[2/8] Checking Python version..."
-python_version=$(python3 --version 2>&1 | awk '{print $2}')
-echo "✓ Python version: $python_version"
-if ! python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)"; then
-    echo "Error: Python 3.10+ required. Found: $python_version"
-    exit 1
+if command -v python3.11 &> /dev/null; then
+    PYTHON_CMD=python3.11
+    python_version=$(python3.11 --version 2>&1 | awk '{print $2}')
+    echo "✓ Using Python 3.11: $python_version"
+else
+    PYTHON_CMD=python3
+    python_version=$(python3 --version 2>&1 | awk '{print $2}')
+    echo "✓ Python version: $python_version"
+    if ! python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"; then
+        echo "Error: Python 3.11+ required. Found: $python_version"
+        echo "Install with: sudo apt install -y python3.11 python3.11-venv python3.11-dev"
+        exit 1
+    fi
 fi
 echo ""
 
@@ -42,7 +50,11 @@ if command -v apt-get &> /dev/null; then
     echo "Updating package list..."
     sudo apt-get update -qq
     echo "Installing build essentials and CUDA support..."
-    sudo apt-get install -y build-essential python3-dev git wget curl
+    if command -v python3.11 &> /dev/null; then
+        sudo apt-get install -y build-essential python3.11-dev python3.11-venv git wget curl
+    else
+        sudo apt-get install -y build-essential python3-dev git wget curl
+    fi
 else
     echo "⚠ apt-get not found. Skipping system dependencies."
     echo "Please ensure you have: build-essential, python3-dev, git, wget, curl"
@@ -52,7 +64,7 @@ echo ""
 # Create virtual environment
 echo "[4/8] Creating virtual environment..."
 if [ ! -d "venv" ]; then
-    python3 -m venv venv
+    $PYTHON_CMD -m venv venv
     echo "✓ Virtual environment created"
 else
     echo "✓ Virtual environment already exists"
