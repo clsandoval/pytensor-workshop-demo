@@ -17,6 +17,48 @@ from pytensor.graph.basic import Apply
 from pytensor.graph.op import Op
 
 
+def _get_reduce_axes(x, param):
+    """
+    Determine which axes to sum over when computing parameter gradients.
+
+    For batch normalization, gamma and beta are typically per-channel parameters.
+    We need to reduce (sum) over all dimensions except the channel dimension.
+
+    Parameters
+    ----------
+    x : TensorVariable
+        Input tensor (e.g., 4D: NCHW or 2D: NC)
+    param : TensorVariable
+        Parameter tensor (e.g., 1D: C)
+
+    Returns
+    -------
+    tuple
+        Axes to reduce over
+
+    Examples
+    --------
+    For 4D input (N, C, H, W) and 1D param (C,):
+        Returns (0, 2, 3) - reduce over batch, height, width
+
+    For 2D input (N, C) and 1D param (C,):
+        Returns (0,) - reduce over batch only
+    """
+    if x.ndim == 4 and param.ndim == 1:
+        # NCHW format: reduce over batch, height, width (keep channels)
+        return (0, 2, 3)
+    elif x.ndim == 2 and param.ndim == 1:
+        # NC format: reduce over batch only
+        return (0,)
+    elif x.ndim == 1:
+        # 1D: no reduction needed (element-wise)
+        return ()
+    else:
+        # General case: reduce over all except param dimension
+        # Assume param corresponds to dimension 1 (channels)
+        return (0, *range(2, x.ndim))
+
+
 class BatchNormalization(Op):
     """
     Batch Normalization operation (inference mode).
@@ -192,19 +234,87 @@ class BatchNormalization(Op):
 
     def grad(self, inputs, output_grads):
         """
-        Compute gradients.
+        Compute gradients for batch normalization.
 
-        For now, we raise NotImplementedError since we only need
-        inference mode for ONNX export.
+        Implements inference-mode gradients where mean and variance are treated
+        as constants (not computed from the current batch). This is appropriate
+        for fine-tuning pre-trained models or when using fixed batch statistics.
 
-        Training mode would require implementing the full backward pass
-        with gradients for all 5 inputs.
+        Parameters
+        ----------
+        inputs : list
+            [x, gamma, beta, mean, variance]
+        output_grads : list
+            [dy] - gradient w.r.t. output
+
+        Returns
+        -------
+        list
+            [grad_x, grad_gamma, grad_beta, grad_mean, grad_variance]
+            where grad_mean and grad_variance are zero (constants in inference mode)
+
+        Notes
+        -----
+        In inference mode, the forward pass is:
+            y = gamma * (x - mean) / sqrt(variance + epsilon) + beta
+
+        The gradients are:
+            dy/dx = gamma * dy / sqrt(variance + epsilon)
+            dy/dgamma = sum(dy * (x - mean) / sqrt(variance + epsilon))
+            dy/dbeta = sum(dy)
+            dy/dmean = 0 (constant in inference mode)
+            dy/dvariance = 0 (constant in inference mode)
+
+        References
+        ----------
+        Ioffe & Szegedy (2015): Batch Normalization paper
+        https://kevinzakka.github.io/2016/09/14/batch_normalization/
         """
-        raise NotImplementedError(
-            "BatchNormalization.grad() not implemented. "
-            "This op is for inference only. "
-            "For training, use a framework with built-in BatchNorm training support."
-        )
+        x, gamma, beta, mean, variance = inputs
+        dy = output_grads[0]  # Gradient w.r.t output
+
+        # Compute intermediate values
+        # std = sqrt(variance + epsilon)
+        std = pt.sqrt(variance + self.epsilon)
+
+        # Need to broadcast mean, std, gamma for proper element-wise operations
+        if x.ndim == 4:
+            # NCHW format: reshape (C,) -> (1, C, 1, 1)
+            mean_bc = mean.dimshuffle("x", 0, "x", "x")
+            std_bc = std.dimshuffle("x", 0, "x", "x")
+            gamma_bc = gamma.dimshuffle("x", 0, "x", "x")
+        elif x.ndim == 2:
+            # NC format: reshape (C,) -> (1, C)
+            mean_bc = mean.dimshuffle("x", 0)
+            std_bc = std.dimshuffle("x", 0)
+            gamma_bc = gamma.dimshuffle("x", 0)
+        else:
+            # Default: no reshape needed
+            mean_bc = mean
+            std_bc = std
+            gamma_bc = gamma
+
+        # Normalized input: x_norm = (x - mean) / std
+        x_centered = x - mean_bc
+        x_norm = x_centered / std_bc
+
+        # Gradient w.r.t. gamma: sum over all dimensions except the channel dimension
+        # For 4D input (N, C, H, W), sum over (N, H, W)
+        # For 2D input (N, C), sum over N
+        grad_gamma = (dy * x_norm).sum(axis=_get_reduce_axes(x, gamma))
+
+        # Gradient w.r.t. beta: sum over all dimensions except the channel dimension
+        grad_beta = dy.sum(axis=_get_reduce_axes(x, beta))
+
+        # Gradient w.r.t. x (inference mode - mean/var are constants)
+        # dy/dx = gamma * dy / std
+        grad_x = gamma_bc * dy / std_bc
+
+        # No gradients for mean and variance (treated as constants in inference mode)
+        grad_mean = pt.zeros_like(mean)
+        grad_variance = pt.zeros_like(variance)
+
+        return [grad_x, grad_gamma, grad_beta, grad_mean, grad_variance]
 
 
 # Convenience function

@@ -1,7 +1,6 @@
 """Tests for batch normalization operations."""
 
 import numpy as np
-import pytest
 
 import pytensor.tensor as pt
 from pytensor import function
@@ -183,20 +182,187 @@ def test_batchnorm_op_properties():
     assert output_shapes == [(10, 20)]
 
 
-def test_batchnorm_gradient_not_implemented():
-    """
-    Test that gradient raises NotImplementedError.
+def test_batchnorm_grad_simple():
+    """Test BatchNorm gradient computation (inference mode)."""
+    import pytensor
 
-    We only implement inference mode, so gradients are not supported.
-    """
-    x = pt.vector("x", dtype="float32")
+    # Simple 2D test case
+    x = pt.matrix("x", dtype="float32")
     gamma = pt.vector("gamma", dtype="float32")
     beta = pt.vector("beta", dtype="float32")
     mean = pt.vector("mean", dtype="float32")
-    variance = pt.vector("variance", dtype="float32")
+    var = pt.vector("var", dtype="float32")
 
-    y = batch_normalization(x, gamma, beta, mean, variance)
+    y = batch_normalization(x, gamma, beta, mean, var, epsilon=1e-5)
 
-    # Attempting to compute gradient should raise NotImplementedError
-    with pytest.raises(NotImplementedError, match="inference only"):
-        pt.grad(y.sum(), x)
+    # Compute gradient w.r.t. x
+    loss = y.sum()
+    grad_x = pytensor.grad(loss, x)
+
+    # Compile function
+    f = function([x, gamma, beta, mean, var], [y, grad_x])
+
+    # Test data
+    x_val = np.random.randn(4, 3).astype("float32")
+    gamma_val = np.ones(3, dtype="float32")
+    beta_val = np.zeros(3, dtype="float32")
+    mean_val = np.array([0, 0, 0], dtype="float32")
+    var_val = np.array([1, 1, 1], dtype="float32")
+
+    _y_val, grad_x_val = f(x_val, gamma_val, beta_val, mean_val, var_val)
+
+    # Verify gradient is non-zero
+    assert np.abs(grad_x_val).sum() > 0, "Gradient should not be zero"
+    assert grad_x_val.shape == x_val.shape, "Gradient shape should match input"
+
+
+def test_batchnorm_grad_4d():
+    """Test BatchNorm gradient for 4D CNN tensors (NCHW)."""
+    import pytensor
+
+    # 4D tensor (batch=2, channels=3, height=4, width=4)
+    x = pt.tensor4("x", dtype="float32")
+    gamma = pt.vector("gamma", dtype="float32")
+    beta = pt.vector("beta", dtype="float32")
+    mean = pt.vector("mean", dtype="float32")
+    var = pt.vector("var", dtype="float32")
+
+    y = batch_normalization(x, gamma, beta, mean, var)
+
+    # Loss
+    loss = y.sum()
+
+    # Gradients
+    grad_x = pytensor.grad(loss, x)
+    grad_gamma = pytensor.grad(loss, gamma)
+    grad_beta = pytensor.grad(loss, beta)
+
+    # Compile
+    f = function([x, gamma, beta, mean, var], [grad_x, grad_gamma, grad_beta])
+
+    # Test data
+    np.random.seed(42)
+    x_val = np.random.randn(2, 3, 4, 4).astype("float32")
+    gamma_val = np.ones(3, dtype="float32")
+    beta_val = np.zeros(3, dtype="float32")
+    mean_val = np.zeros(3, dtype="float32")
+    var_val = np.ones(3, dtype="float32")
+
+    grad_x_val, grad_gamma_val, grad_beta_val = f(
+        x_val, gamma_val, beta_val, mean_val, var_val
+    )
+
+    # Verify shapes
+    assert grad_x_val.shape == x_val.shape
+    assert grad_gamma_val.shape == gamma_val.shape
+    assert grad_beta_val.shape == beta_val.shape
+
+    # Verify non-zero gradients
+    assert np.abs(grad_x_val).sum() > 0
+    assert np.abs(grad_gamma_val).sum() > 0
+    assert np.abs(grad_beta_val).sum() > 0
+
+
+def test_batchnorm_grad_numerical():
+    """Verify BatchNorm gradients using finite differences."""
+    import pytensor
+
+    # Small test case for numerical gradient checking
+    x = pt.matrix("x", dtype="float64")  # Use float64 for precision
+    gamma = pt.vector("gamma", dtype="float64")
+    beta = pt.vector("beta", dtype="float64")
+    mean = pt.vector("mean", dtype="float64")
+    var = pt.vector("var", dtype="float64")
+
+    y = batch_normalization(x, gamma, beta, mean, var)
+    loss = y.sum()
+
+    # Analytical gradient
+    grad_x_symbolic = pytensor.grad(loss, x)
+    grad_fn = function([x, gamma, beta, mean, var], grad_x_symbolic)
+
+    # Forward function for numerical gradient
+    forward_fn = function([x, gamma, beta, mean, var], loss)
+
+    # Test data (small for numerical stability)
+    np.random.seed(42)
+    x_val = np.random.randn(2, 3).astype("float64") * 0.1
+    gamma_val = np.ones(3, dtype="float64")
+    beta_val = np.zeros(3, dtype="float64")
+    mean_val = np.zeros(3, dtype="float64")
+    var_val = np.ones(3, dtype="float64")
+
+    # Analytical gradient
+    grad_analytical = grad_fn(x_val, gamma_val, beta_val, mean_val, var_val)
+
+    # Numerical gradient (finite differences)
+    eps = 1e-5
+    grad_numerical = np.zeros_like(x_val)
+
+    for i in range(x_val.shape[0]):
+        for j in range(x_val.shape[1]):
+            x_plus = x_val.copy()
+            x_plus[i, j] += eps
+            loss_plus = forward_fn(x_plus, gamma_val, beta_val, mean_val, var_val)
+
+            x_minus = x_val.copy()
+            x_minus[i, j] -= eps
+            loss_minus = forward_fn(x_minus, gamma_val, beta_val, mean_val, var_val)
+
+            grad_numerical[i, j] = (loss_plus - loss_minus) / (2 * eps)
+
+    # Compare
+    rel_error = np.abs(grad_analytical - grad_numerical) / (
+        np.abs(grad_analytical) + np.abs(grad_numerical) + 1e-8
+    )
+    max_rel_error = rel_error.max()
+
+    assert max_rel_error < 1e-4, f"Gradient check failed: {max_rel_error}"
+
+
+def test_batchnorm_grad_in_network():
+    """Test BatchNorm gradients in a simple network (Conv → BN → ReLU → Loss)."""
+    import pytensor
+    from pytensor import shared
+    from pytensor.tensor.conv.abstract_conv import conv2d
+
+    # Build mini network
+    x = pt.tensor4("x", dtype="float32")
+
+    # Conv layer
+    W_conv = shared(np.random.randn(8, 3, 3, 3).astype("float32") * 0.1, name="W_conv")
+    conv_out = conv2d(x, W_conv, border_mode="valid", filter_flip=False)
+
+    # BatchNorm
+    gamma = shared(np.ones(8, dtype="float32"), name="gamma")
+    beta = shared(np.zeros(8, dtype="float32"), name="beta")
+    mean = shared(np.zeros(8, dtype="float32"), name="mean")
+    var = shared(np.ones(8, dtype="float32"), name="var")
+
+    bn_out = batch_normalization(conv_out, gamma, beta, mean, var)
+
+    # ReLU
+    relu_out = pt.maximum(bn_out, 0)
+
+    # Loss
+    loss = relu_out.sum()
+
+    # Compute gradients
+    params = [W_conv, gamma, beta]
+    grads = pytensor.grad(loss, params)
+
+    # Compile
+    f = function([x], [loss, *grads])
+
+    # Test
+    x_val = np.random.randn(2, 3, 10, 10).astype("float32")
+    results = f(x_val)
+
+    loss_val = results[0]
+    grad_W, grad_gamma, grad_beta = results[1:]
+
+    # Verify
+    assert loss_val > 0
+    assert np.abs(grad_W).sum() > 0
+    assert np.abs(grad_gamma).sum() > 0
+    assert np.abs(grad_beta).sum() > 0
