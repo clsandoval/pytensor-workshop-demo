@@ -8,8 +8,8 @@ import pytest
 
 
 # CRITICAL: Set environment variables BEFORE importing JAX or PyTensor
-# These force JAX to prioritize GPU over CPU
-os.environ["JAX_PLATFORMS"] = "cuda,cpu"
+# Force JAX to use GPU only (no CPU fallback)
+os.environ["JAX_PLATFORMS"] = "cuda"
 os.environ["JAX_ENABLE_X64"] = "False"
 os.environ["PYTENSOR_FLAGS"] = (
     "floatX=float32,optimizer=fast_run,optimizer_excluding=shape_unsafe"
