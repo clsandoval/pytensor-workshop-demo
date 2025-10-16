@@ -1,23 +1,16 @@
 """
 Quick tests for YOLO11n model architecture.
 
-Run: python test_model.py
+Run: uv run pytest testing/test_model.py -v
 """
 
-import sys
-
 import numpy as np
+from yolo.blocks import SPPF, C3k2, ConvBNSiLU
+from yolo.model import build_yolo11n
 
 import pytensor
 import pytensor.tensor as pt
 from pytensor import function
-
-
-# Add parent directory to path for imports
-sys.path.insert(0, "..")
-
-from yolo.blocks import SPPF, C3k2, ConvBNSiLU
-from yolo.model import build_yolo11n
 
 
 def test_conv_bn_silu():
@@ -154,32 +147,3 @@ def test_yolo11n_gradients():
 
     print(f"  ✓ Computed gradients for {len(test_params)} parameters")
     print("  ✓ All gradients are non-zero")
-
-
-def main():
-    """Run all tests."""
-    print("=" * 70)
-    print(" " * 20 + "YOLO11n Model Tests")
-    print("=" * 70)
-
-    try:
-        test_conv_bn_silu()
-        test_c3k2()
-        test_sppf()
-        test_yolo11n_forward()
-        test_yolo11n_gradients()
-
-        print("\n" + "=" * 70)
-        print("✓ All tests passed!")
-        print("=" * 70)
-
-    except Exception as e:
-        print(f"\n✗ Test failed: {e}")
-        import traceback
-
-        traceback.print_exc()
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

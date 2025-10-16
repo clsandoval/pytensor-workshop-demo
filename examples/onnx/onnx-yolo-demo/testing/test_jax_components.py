@@ -5,16 +5,10 @@ Comprehensive JAX JIT compatibility test for YOLO11n components.
 This script tests each component of the YOLO11n model independently
 to identify which parts work with JAX JIT compilation.
 
-Run on GPU server:
-    PYTENSOR_FLAGS="floatX=float32" python test_jax_components.py
-
-Or with JAX mode enabled:
-    PYTENSOR_FLAGS="floatX=float32" python test_jax_components.py --jax
+Run: uv run pytest testing/test_jax_components.py -v
 """
 
-import argparse
 import os
-import sys
 import time
 
 import numpy as np
@@ -28,45 +22,12 @@ import pytensor.tensor as pt
 from pytensor import function, shared
 
 
-# Add parent directory to path for imports
-sys.path.insert(0, "..")
-
-
-def setup_jax(enable_jax=False):
-    """Setup JAX backend if requested."""
-    if enable_jax:
-        try:
-            import jax
-
-            devices = jax.devices()
-            device_type = devices[0].platform if len(devices) > 0 else "none"
-
-            if device_type == "gpu":
-                pytensor.config.mode = "JAX"
-                print(f"✓ JAX mode enabled: {pytensor.config.mode}")
-                print(f"  JAX devices: {devices}")
-                print(f"  Device type: {device_type}")
-                return True
-            else:
-                print(f"⚠ JAX found but no GPU: {device_type}")
-                print("  Using default CPU backend")
-                return False
-        except Exception as e:
-            print(f"⚠ Could not enable JAX: {e}")
-            print("  Using default CPU backend")
-            return False
-    else:
-        print("[INFO] Running in default mode (CPU)")
-        print(f"  PyTensor mode: {pytensor.config.mode}")
-        return False
-
-
 # =============================================================================
 # Test 1: Basic Operations
 # =============================================================================
 
 
-def test_basic_ops():
+def test_basic_ops(setup_python_path):
     """Test basic PyTensor operations."""
     print("\n[Test 1] Basic Operations")
     print("-" * 70)
@@ -93,7 +54,7 @@ def test_basic_ops():
 # =============================================================================
 
 
-def test_dimshuffle_tile():
+def test_dimshuffle_tile(setup_python_path):
     """Test dimshuffle and tile operations."""
     print("\n[Test 2] Dimshuffle and Tile")
     print("-" * 70)
@@ -126,7 +87,7 @@ def test_dimshuffle_tile():
 # =============================================================================
 
 
-def test_upsampling():
+def test_upsampling(setup_python_path):
     """Test the complete upsampling operation."""
     print("\n[Test 3] Upsampling Operation")
     print("-" * 70)
@@ -182,7 +143,7 @@ def test_upsampling():
 # =============================================================================
 
 
-def test_conv_bn_silu():
+def test_conv_bn_silu(setup_python_path):
     """Test ConvBNSiLU building block."""
     print("\n[Test 4] ConvBNSiLU Block")
     print("-" * 70)
@@ -216,7 +177,7 @@ def test_conv_bn_silu():
 # =============================================================================
 
 
-def test_bottleneck():
+def test_bottleneck(setup_python_path):
     """Test Bottleneck block."""
     print("\n[Test 5] Bottleneck Block")
     print("-" * 70)
@@ -250,7 +211,7 @@ def test_bottleneck():
 # =============================================================================
 
 
-def test_c3k2():
+def test_c3k2(setup_python_path):
     """Test C3k2 block."""
     print("\n[Test 6] C3k2 Block")
     print("-" * 70)
@@ -284,7 +245,7 @@ def test_c3k2():
 # =============================================================================
 
 
-def test_sppf():
+def test_sppf(setup_python_path):
     """Test SPPF block."""
     print("\n[Test 7] SPPF Block")
     print("-" * 70)
@@ -318,7 +279,7 @@ def test_sppf():
 # =============================================================================
 
 
-def test_backbone():
+def test_backbone(setup_python_path):
     """Test YOLO11n backbone."""
     print("\n[Test 8] YOLO11n Backbone")
     print("-" * 70)
@@ -358,7 +319,7 @@ def test_backbone():
 # =============================================================================
 
 
-def test_head():
+def test_head(setup_python_path):
     """Test YOLO11n detection head."""
     print("\n[Test 9] YOLO11n Detection Head")
     print("-" * 70)
@@ -404,7 +365,7 @@ def test_head():
 # =============================================================================
 
 
-def test_full_model():
+def test_full_model(setup_python_path):
     """Test complete YOLO11n model."""
     print("\n[Test 10] Full YOLO11n Model")
     print("-" * 70)
@@ -452,7 +413,7 @@ def test_full_model():
 # =============================================================================
 
 
-def test_loss():
+def test_loss(setup_python_path):
     """Test loss function."""
     print("\n[Test 11] Loss Function")
     print("-" * 70)
@@ -490,7 +451,7 @@ def test_loss():
 # =============================================================================
 
 
-def test_gradients():
+def test_gradients(setup_python_path):
     """Test gradient computation."""
     print("\n[Test 12] Gradient Computation")
     print("-" * 70)
@@ -539,7 +500,7 @@ def test_gradients():
 # =============================================================================
 
 
-def test_training_step():
+def test_training_step(setup_python_path):
     """Test a complete training step with updates."""
     print("\n[Test 13] Training Step with Updates")
     print("-" * 70)
@@ -585,93 +546,3 @@ def test_training_step():
 
         traceback.print_exc()
         return False
-
-
-# =============================================================================
-# Main Test Runner
-# =============================================================================
-
-
-def main():
-    """Run all tests."""
-    parser = argparse.ArgumentParser(description="Test YOLO11n components with JAX JIT")
-    parser.add_argument(
-        "--jax", action="store_true", help="Enable JAX mode (requires GPU)"
-    )
-    parser.add_argument(
-        "--quick",
-        action="store_true",
-        help="Run quick tests only (skip slow tests)",
-    )
-    args = parser.parse_args()
-
-    print("=" * 70)
-    print("YOLO11n Component Tests".center(70))
-    print("=" * 70)
-
-    # Setup
-    jax_enabled = setup_jax(args.jax)
-    print()
-
-    # Define all tests
-    all_tests = [
-        ("Basic Ops", test_basic_ops, False),
-        ("Dimshuffle/Tile", test_dimshuffle_tile, False),
-        ("Upsampling", test_upsampling, False),
-        ("ConvBNSiLU", test_conv_bn_silu, False),
-        ("Bottleneck", test_bottleneck, False),
-        ("C3k2", test_c3k2, False),
-        ("SPPF", test_sppf, False),
-        ("Backbone", test_backbone, True),
-        ("Head", test_head, True),
-        ("Full Model", test_full_model, True),
-        ("Loss", test_loss, True),
-        ("Gradients", test_gradients, True),
-        ("Training Step", test_training_step, True),
-    ]
-
-    # Run tests
-    results = {}
-    for name, test_func, is_slow in all_tests:
-        if args.quick and is_slow:
-            print(f"\n[Skipped] {name} (slow test)")
-            continue
-
-        try:
-            results[name] = test_func()
-        except KeyboardInterrupt:
-            print("\n\nInterrupted by user")
-            break
-        except Exception as e:
-            print(f"\n  ✗ Unexpected error: {e}")
-            results[name] = False
-
-    # Summary
-    print("\n" + "=" * 70)
-    print("Test Summary".center(70))
-    print("=" * 70)
-
-    passed = sum(1 for v in results.values() if v)
-    total = len(results)
-
-    for name, result in results.items():
-        status = "✓ PASS" if result else "✗ FAIL"
-        print(f"{name:30s} {status}")
-
-    print("-" * 70)
-    print(f"Results: {passed}/{total} tests passed")
-
-    if jax_enabled:
-        print("\n[INFO] JAX mode was enabled for these tests")
-    else:
-        print("\n[INFO] Tests ran in CPU mode")
-        print("  To test with JAX: python test_jax_components.py --jax")
-
-    print("=" * 70)
-
-    # Exit code
-    sys.exit(0 if passed == total else 1)
-
-
-if __name__ == "__main__":
-    main()

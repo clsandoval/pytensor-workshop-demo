@@ -328,8 +328,16 @@ class YOLO11n:
 
         Returns
         -------
-        predictions : dict
-            Detection predictions at 3 scales
+        predictions : tuple
+            Detection predictions at 3 scales (det_p3, det_p4, det_p5):
+            - det_p3: (batch, 4+C, 40, 40) - P3 detections
+            - det_p4: (batch, 4+C, 20, 20) - P4 detections
+            - det_p5: (batch, 4+C, 10, 10) - P5 detections
+
+        Note: Changed from dict to tuple for compatibility with:
+            - Loss function (loss.py:106, 203) which uses tuple unpacking
+            - Test suite (test_jax_components.py:421) which expects tuple
+            - Python convention for multiple return values
         """
         # Backbone
         p3, p4, p5 = self.backbone(x)
@@ -337,11 +345,8 @@ class YOLO11n:
         # Head
         det_p3, det_p4, det_p5 = self.head(p3, p4, p5)
 
-        return {
-            "p3": det_p3,  # (batch, 4+C, 40, 40)
-            "p4": det_p4,  # (batch, 4+C, 20, 20)
-            "p5": det_p5,  # (batch, 4+C, 10, 10)
-        }
+        # Return tuple instead of dict (fixes Issue #1)
+        return det_p3, det_p4, det_p5
 
 
 def build_yolo11n(num_classes=2, input_size=320):
@@ -361,8 +366,8 @@ def build_yolo11n(num_classes=2, input_size=320):
         Initialized model
     x : TensorVariable
         Input symbolic variable
-    predictions : dict
-        Output predictions
+    predictions : tuple
+        Output predictions (det_p3, det_p4, det_p5)
     """
     # Input
     x = pt.tensor4("x", dtype="float32")

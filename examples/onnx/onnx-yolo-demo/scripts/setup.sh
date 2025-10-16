@@ -64,58 +64,41 @@ else
 fi
 echo ""
 
-# Create virtual environment
-echo "[4/8] Creating virtual environment..."
-if [ ! -d "venv" ]; then
-    $PYTHON_CMD -m venv venv
-    echo "✓ Virtual environment created"
+# Check if uv is installed
+echo "[4/8] Checking for uv..."
+if ! command -v uv &> /dev/null; then
+    echo "⚠ uv not found. Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    # Add uv to PATH for current session
+    export PATH="$HOME/.cargo/bin:$PATH"
+    echo "✓ uv installed"
 else
-    echo "✓ Virtual environment already exists"
+    echo "✓ uv detected"
 fi
 echo ""
 
-# Activate virtual environment
-echo "[5/8] Activating virtual environment..."
-source venv/bin/activate
-echo "✓ Virtual environment activated"
-echo ""
-
-# Upgrade pip
-echo "[6/8] Upgrading pip..."
-pip install --upgrade pip setuptools wheel --quiet
-echo "✓ pip upgraded"
-echo ""
-
-# Install PyTensor with JAX backend
-echo "[7/8] Installing PyTensor and dependencies..."
+# Install dependencies with uv
+echo "[5/8] Installing dependencies with uv..."
 echo "This may take several minutes..."
 
-# Install from the parent pytensor directory
+# Install PyTensor from parent directory (editable)
 cd ../../../
-pip install -e . --quiet
+uv pip install -e .
 
-# Install JAX with CUDA support
-# Note: Adjust cuda version if needed (cuda12 shown here)
-pip install --upgrade "jax[cuda12]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html --quiet
-
-# Install training dependencies
-pip install --quiet \
-    numpy \
-    scipy \
-    pillow \
-    wandb \
-    pycocotools \
-    tqdm \
-    pyyaml \
-    requests
-
+# Return to demo directory
 cd examples/onnx/onnx-yolo-demo/
+
+# Sync all dependencies from pyproject.toml
+uv sync
+
+# Install dev dependencies
+uv pip install -e ".[dev]"
 
 echo "✓ All Python packages installed"
 echo ""
 
 # Create data directory
-echo "[8/8] Setting up directories and configuration..."
+echo "[6/6] Setting up directories and configuration..."
 mkdir -p data/coco
 mkdir -p checkpoints
 mkdir -p logs
@@ -125,8 +108,12 @@ echo "✓ Directories created"
 if [ ! -f ".env" ]; then
     echo "Creating default .env file..."
     cat > .env << 'ENVEOF'
-# PyTensor Configuration (JAX backend will auto-detect GPU)
-PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run"
+# PyTensor Configuration
+PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run,optimizer_excluding=shape_unsafe"
+
+# JAX Platform Configuration - FORCE GPU USAGE
+JAX_PLATFORMS="cuda,cpu"
+JAX_ENABLE_X64=False
 
 # JAX GPU Memory Configuration
 XLA_PYTHON_CLIENT_PREALLOCATE=true
@@ -159,21 +146,21 @@ echo "Setup Complete!"
 echo "=========================================="
 echo ""
 echo "Next steps:"
-echo "1. Activate the virtual environment:"
-echo "   source venv/bin/activate"
-echo ""
-echo "2. Login to Weights & Biases (for training visualization):"
+echo "1. Login to Weights & Biases (for training visualization):"
 echo "   wandb login"
 echo "   (You'll need your API key from https://wandb.ai/authorize)"
 echo ""
-echo "3. Run the training script:"
-echo "   bash train.sh"
+echo "2. Run the training script:"
+echo "   bash scripts/train.sh"
 echo ""
-echo "4. To run training in background and logout:"
-echo "   nohup bash train.sh > training.log 2>&1 &"
+echo "3. To run training in background and logout:"
+echo "   nohup bash scripts/train.sh > training.log 2>&1 &"
 echo "   # Monitor with: tail -f training.log"
 echo ""
-echo "5. After training completes, download the ONNX model:"
+echo "4. After training completes, download the ONNX model:"
 echo "   scp user@server:$(pwd)/checkpoints/yolo11n_best.onnx ."
+echo ""
+echo "5. To run tests:"
+echo "   uv run pytest testing/ -v"
 echo ""
 echo "=========================================="

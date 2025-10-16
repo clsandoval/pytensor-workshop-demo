@@ -11,17 +11,16 @@ git clone <your-repo-url>
 cd pytensor/examples/onnx/onnx-yolo-demo
 
 # 3. Run setup (one time only)
-bash setup.sh
+bash scripts/setup.sh
 # This creates a .env file with sensible defaults - no need to edit it!
 
 # 4. (Optional) Login to WandB for training visualization
-source venv/bin/activate
 wandb login
 # Enter API key from https://wandb.ai/authorize
 # If skipped, training will run without WandB logging
 
 # 5. Start training in background (includes COCO download)
-nohup bash train.sh > training.log 2>&1 &
+nohup bash scripts/train.sh > training.log 2>&1 &
 # First run will download ~20GB COCO dataset (30-60 min)
 # Subsequent runs skip download
 
@@ -88,8 +87,22 @@ kill <PID>
 ## Resume Training
 
 ```bash
-source venv/bin/activate
-python train.py --resume checkpoints/interrupted_checkpoint.npz
+uv run python train.py --resume checkpoints/interrupted_checkpoint.npz
+```
+
+## Running Tests
+
+To verify the installation and model implementation:
+
+```bash
+# Run all tests
+uv run pytest testing/ -v
+
+# Run specific test file
+uv run pytest testing/test_model.py -v
+
+# Run individual test
+uv run pytest testing/test_model.py::test_conv_bn_silu -v
 ```
 
 ## Typical Timeline
@@ -123,7 +136,7 @@ You'll have:
 
 ## File Sizes
 
-- Virtual environment: ~2GB
+- UV cache: ~500MB
 - COCO dataset (optional): ~20GB train, ~1GB val
 - Checkpoints: ~20MB each
 - ONNX model: ~10MB

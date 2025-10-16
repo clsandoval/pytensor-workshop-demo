@@ -22,15 +22,13 @@ else
 fi
 echo ""
 
-# Activate virtual environment if it exists
-if [ -d "venv" ]; then
-    echo "Activating virtual environment..."
-    source venv/bin/activate
-    echo "✓ Virtual environment activated"
-else
-    echo "⚠ No virtual environment found. Run setup.sh first!"
+# Check if uv is installed
+if ! command -v uv &> /dev/null; then
+    echo "⚠ uv not found. Install with: pip install uv"
+    echo "  Install: curl -LsSf https://astral.sh/uv/install.sh | sh"
     exit 1
 fi
+echo "✓ uv detected"
 
 # Check WandB login status (non-interactive)
 echo ""
@@ -96,7 +94,7 @@ if [ ! -f "data/coco/annotations/instances_train2017.json" ]; then
     echo "COCO dataset not found. Downloading..."
     echo "⚠ This will download ~20GB of data. It may take 30-60 minutes."
     echo ""
-    python dataset.py --data-dir ./data/coco --split train
+    uv run python dataset.py --data-dir ./data/coco --split train
     echo "✓ COCO dataset downloaded"
 else
     echo "✓ COCO dataset found"
@@ -111,14 +109,18 @@ echo ""
 
 # CRITICAL: Set PyTensor flags BEFORE Python starts
 # This must happen in the shell, not inside Python
-export PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run"
+# Note: optimizer_excluding=shape_unsafe prevents graph rewrites that introduce
+# dynamic shape computations incompatible with JAX JIT compilation.
+# These rewrites (local_fill_to_alloc, local_elemwise_alloc, etc.) cause
+# TypeError: Shapes must be 1D sequences of concrete values, got (..., JitTracer, ...)
+export PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run,optimizer_excluding=shape_unsafe"
 export JAX_PLATFORMS="cuda,cpu"
 export JAX_ENABLE_X64=False
 echo "PyTensor config: $PYTENSOR_FLAGS"
 echo "JAX platforms: $JAX_PLATFORMS"
 echo ""
 
-python train.py \
+uv run python train.py \
     --epochs $EPOCHS \
     --batch-size $BATCH_SIZE \
     --lr $LR \
