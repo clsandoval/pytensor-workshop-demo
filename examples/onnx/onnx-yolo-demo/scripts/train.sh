@@ -94,7 +94,7 @@ if [ ! -f "data/coco/annotations/instances_train2017.json" ]; then
     echo "COCO dataset not found. Downloading..."
     echo "⚠ This will download ~20GB of data. It may take 30-60 minutes."
     echo ""
-    uv run python dataset.py --data-dir ./data/coco --split train
+    uv run python -m yolo.dataset --data-dir ./data/coco --split train
     echo "✓ COCO dataset downloaded"
 else
     echo "✓ COCO dataset found"
@@ -114,10 +114,10 @@ echo ""
 # These rewrites (local_fill_to_alloc, local_elemwise_alloc, etc.) cause
 # TypeError: Shapes must be 1D sequences of concrete values, got (..., JitTracer, ...)
 export PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run,optimizer_excluding=shape_unsafe"
-export JAX_PLATFORMS="cuda,cpu"
+export JAX_PLATFORMS="cuda"
 export JAX_ENABLE_X64=False
 echo "PyTensor config: $PYTENSOR_FLAGS"
-echo "JAX platforms: $JAX_PLATFORMS"
+echo "JAX platforms: $JAX_PLATFORMS (GPU ONLY)"
 echo ""
 
 uv run python train.py \

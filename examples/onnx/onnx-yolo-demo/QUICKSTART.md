@@ -43,13 +43,14 @@ scp user@your-gpu-server:~/pytensor/examples/onnx/onnx-yolo-demo/checkpoints/yol
 
 ```
 onnx-yolo-demo/
-├── venv/                          # Python environment
+├── .venv/                         # Python environment
 ├── data/coco/                     # Dataset (if using real data)
 ├── checkpoints/
 │   ├── best_model.npz            # Best checkpoint
 │   ├── yolo11n_best.onnx         # ONNX model for deployment
 │   └── checkpoint_epoch_*.npz    # Periodic checkpoints
-└── training.log                   # Training output
+├── logs/                          # Training logs
+└── training.log                   # Training output (when run with nohup)
 ```
 
 ## Monitor Training

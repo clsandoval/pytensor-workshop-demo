@@ -20,7 +20,7 @@ if [[ "$OSTYPE" != "linux-gnu"* ]]; then
 fi
 
 # Check for GPU
-echo "[1/8] Checking for GPU..."
+echo "[1/7] Checking for GPU..."
 if command -v nvidia-smi &> /dev/null; then
     echo "✓ NVIDIA GPU detected:"
     nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
@@ -30,7 +30,7 @@ fi
 echo ""
 
 # Check Python version
-echo "[2/8] Checking Python version..."
+echo "[2/7] Checking Python version..."
 if command -v python3.11 &> /dev/null; then
     PYTHON_CMD=python3.11
     python_version=$(python3.11 --version 2>&1 | awk '{print $2}')
@@ -48,7 +48,7 @@ fi
 echo ""
 
 # Install system dependencies
-echo "[3/8] Installing system dependencies..."
+echo "[3/7] Installing system dependencies..."
 if command -v apt-get &> /dev/null; then
     echo "Updating package list..."
     sudo apt-get update -qq
@@ -65,7 +65,7 @@ fi
 echo ""
 
 # Check if uv is installed
-echo "[4/8] Checking for uv..."
+echo "[4/7] Checking for uv..."
 if ! command -v uv &> /dev/null; then
     echo "⚠ uv not found. Installing uv..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -78,7 +78,7 @@ fi
 echo ""
 
 # Install dependencies with uv
-echo "[5/8] Installing dependencies with uv..."
+echo "[5/7] Installing dependencies with uv..."
 echo "This may take several minutes..."
 
 # Install PyTensor from parent directory (editable)
@@ -98,7 +98,7 @@ echo "✓ All Python packages installed"
 echo ""
 
 # Create data directory
-echo "[6/6] Setting up directories and configuration..."
+echo "[6/7] Setting up directories and configuration..."
 mkdir -p data/coco
 mkdir -p checkpoints
 mkdir -p logs
@@ -112,7 +112,7 @@ if [ ! -f ".env" ]; then
 PYTENSOR_FLAGS="floatX=float32,optimizer=fast_run,optimizer_excluding=shape_unsafe"
 
 # JAX Platform Configuration - FORCE GPU USAGE
-JAX_PLATFORMS="cuda,cpu"
+JAX_PLATFORMS="cuda"
 JAX_ENABLE_X64=False
 
 # JAX GPU Memory Configuration
@@ -134,7 +134,7 @@ echo ""
 
 # Clean Python cache to ensure float32 config takes effect
 echo ""
-echo "Cleaning Python cache..."
+echo "[7/7] Cleaning Python cache..."
 find ../../../ -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 find ../../../ -type f -name "*.pyc" -delete 2>/dev/null || true
 echo "✓ Cache cleaned"
