@@ -57,3 +57,6 @@ coverage.xml
 .coverage.*
 .claude/
 .hypothesis/
+
+# Ignore markdown files in thoughts directory
+thoughts/**/*.md
