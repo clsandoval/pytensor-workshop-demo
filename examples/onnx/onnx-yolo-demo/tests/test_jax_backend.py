@@ -1,5 +1,12 @@
 """Tests for JAX backend compilation and execution."""
 
+import os
+
+
+# Set PyTensor configuration before any PyTensor imports
+# This prevents JAX JIT compilation errors with dynamic shapes
+os.environ["PYTENSOR_FLAGS"] = "floatX=float32,optimizer_excluding=shape_unsafe"
+
 import numpy as np
 import pytest
 from yolo.model import YOLO11n, build_yolo11n
@@ -25,6 +32,12 @@ def test_model_compiles_with_jax():
     """
     pytest.importorskip("jax")
     import jax
+
+    # Verify configuration is set
+    print(f"optimizer_excluding: {pytensor.config.optimizer_excluding}")
+    assert pytensor.config.optimizer_excluding == "shape_unsafe", (
+        f"optimizer_excluding not set correctly: {pytensor.config.optimizer_excluding}"
+    )
 
     _model, x_sym, predictions = build_yolo11n(num_classes=2, input_size=320)
 
@@ -103,9 +116,7 @@ def test_jax_gradient_flow():
 
     # Get model parameters
     params = [
-        p
-        for p in model.backbone.get_params() + model.head.get_params()
-        if hasattr(p, "name")
+        p for p in model.backbone.params + model.head.params if hasattr(p, "name")
     ]
 
     if len(params) == 0:

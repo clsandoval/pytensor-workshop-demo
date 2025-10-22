@@ -18,6 +18,7 @@ If not set, ONNX models will fail to load in browsers with type mismatch errors.
 """
 
 import pytensor.tensor as pt
+from pytensor.tensor.resize import resize
 
 from .blocks import C2PSA, SPPF, C3k2, ConvBNSiLU
 
@@ -256,41 +257,15 @@ class YOLO11nHead:
         return det_p3, det_p4, det_p5
 
     def _upsample(self, x, scale=2):
-        """Upsample using nearest neighbor (JAX-compatible)."""
-        # x: (batch, C, H, W)
-        # Use explicit reshaping to avoid dynamic shapes in JAX JIT
+        """Upsample using nearest neighbor (JAX-compatible).
 
-        # Get input shape using pt.shape() for symbolic computation
-        input_shape = x.shape
-        batch_size = input_shape[0]
-        channels = input_shape[1]
-        height = input_shape[2]
-        width = input_shape[3]
-
-        # Strategy: expand dims, tile, then rearrange and flatten
-        # (B, C, H, W) -> (B, C, H, 1, W, 1) -> (B, C, H, scale, W, scale)
-        # -> (B, C, H, W, scale, scale) -> (B, C, H*scale, W*scale)
-
-        # Step 1: Add singleton dimensions for tiling
-        x_expanded = x.dimshuffle(0, 1, 2, "x", 3, "x")  # (B, C, H, 1, W, 1)
-
-        # Step 2: Tile along the new dimensions
-        x_tiled = pt.tile(
-            x_expanded, (1, 1, 1, scale, 1, scale)
-        )  # (B, C, H, scale, W, scale)
-
-        # Step 3: Rearrange to interleave dimensions
-        # (B, C, H, scale, W, scale) -> (B, C, H, W, scale, scale)
-        x_rearranged = x_tiled.dimshuffle(0, 1, 2, 4, 3, 5)
-
-        # Step 4: Flatten last 4 dims to (B, C, H*scale, W*scale)
-        # Compute output shape from input shape
-        out_height = height * scale
-        out_width = width * scale
-
-        x_upsampled = x_rearranged.reshape(
-            (batch_size, channels, out_height, out_width)
-        )
+        Uses PyTensor's resize operation which has proper JAX dispatch support
+        and avoids dynamic shape computation issues.
+        """
+        # Use PyTensor's resize operation with static scale factors
+        # This avoids all JAX tracer issues because the scale factors are
+        # Python floats, not symbolic tensors
+        x_upsampled = resize(x, scale_factor=(scale, scale), mode="nearest")
 
         return x_upsampled
 
