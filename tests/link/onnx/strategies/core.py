@@ -113,6 +113,58 @@ def _safe_integer_elements(dtype):
 
 
 @st.composite
+def scalar_tensor(draw, dtype=None, value_range=None):
+    """Generate 0-dimensional (scalar) tensor.
+
+    Parameters
+    ----------
+    dtype : numpy dtype or None
+        Tensor dtype. If None, randomly chosen from onnx_dtypes()
+    value_range : tuple or None
+        (min, max) for numeric values. If None, uses safe defaults
+
+    Returns
+    -------
+    numpy.ndarray
+        0-D tensor (shape ())
+
+    Examples
+    --------
+    >>> scalar_tensor().example()  # doctest: +SKIP
+    array(3.14, dtype=float32)
+
+    >>> scalar_tensor(dtype=np.bool_).example()  # doctest: +SKIP
+    array(True)
+    """
+    if dtype is None:
+        dtype = draw(onnx_dtypes())
+
+    # Generate value based on dtype (0-D tensor)
+    if dtype == np.bool_ or dtype == "bool":
+        value = draw(st.booleans())
+        return np.array(value, dtype=np.bool_)
+    elif np.issubdtype(dtype, np.floating):
+        if value_range is None:
+            value_range = (-1e3, 1e3)
+        value = draw(
+            st.floats(
+                min_value=value_range[0],
+                max_value=value_range[1],
+                allow_nan=False,
+                allow_infinity=False,
+            )
+        )
+        return np.array(value, dtype=dtype)
+    elif np.issubdtype(dtype, np.integer):
+        if value_range is None:
+            value_range = (-100, 100)
+        value = draw(st.integers(min_value=value_range[0], max_value=value_range[1]))
+        return np.array(value, dtype=dtype)
+    else:
+        raise ValueError(f"Unsupported dtype: {dtype}")
+
+
+@st.composite
 def onnx_tensor(draw, dtype=None, shape=None, elements=None):
     """Generate ONNX-compatible tensor.
 

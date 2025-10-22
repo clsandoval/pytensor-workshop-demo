@@ -20,6 +20,7 @@ import numpy as np
 
 from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.fg import FunctionGraph
+from pytensor.raise_op import Assert, CheckAndRaise
 
 
 # Target ONNX opset version
@@ -67,6 +68,35 @@ def onnx_funcify(op, node=None, **kwargs):
         f"  @onnx_funcify.register({type(op).__name__})\n"
         f"  def onnx_funcify_{type(op).__name__}(op, node, var_names, get_var_name, **kwargs):\n"
         f"      # Return onnx.NodeProto\n"
+    )
+
+
+@onnx_funcify.register(Assert)
+@onnx_funcify.register(CheckAndRaise)
+def onnx_funcify_assert(op, node, var_names, get_var_name, **kwargs):
+    """
+    Assert and CheckAndRaise operations are skipped during ONNX export.
+
+    These operations perform runtime validation and can raise exceptions,
+    but ONNX has no exception handling mechanism. For ONNX export, we
+    assume shapes are validated at compile time, so assertions are
+    converted to pass-through (Identity) operations.
+
+    Node structure:
+    - inputs[0]: The value to return if assertion passes
+    - inputs[1:]: Boolean conditions that must all be True
+
+    We only pass through the value, ignoring the conditions.
+    """
+    # First input is the value, rest are conditions
+    input_name = get_var_name(node.inputs[0])
+    output_name = get_var_name(node.outputs[0])
+
+    return helper.make_node(
+        "Identity",
+        inputs=[input_name],
+        outputs=[output_name],
+        name=f"assert_passthrough_{output_name}",
     )
 
 

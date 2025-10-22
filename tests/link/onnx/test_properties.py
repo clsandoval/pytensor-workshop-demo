@@ -81,6 +81,16 @@ def test_onnx_matches_pytensor(tmp_path, op_name, data):
             symbolic_inputs = [x, y]
             test_values = [inputs_tuple[0], inputs_tuple[1]]
             result = op_config.op_func(x, y)
+    elif len(inputs_tuple) == 3:
+        # Ternary operation (switch)
+        cond = pt.tensor(
+            "cond", dtype=inputs_tuple[0].dtype, shape=inputs_tuple[0].shape
+        )
+        x = pt.tensor("x", dtype=inputs_tuple[1].dtype, shape=inputs_tuple[1].shape)
+        y = pt.tensor("y", dtype=inputs_tuple[2].dtype, shape=inputs_tuple[2].shape)
+        symbolic_inputs = [cond, x, y]
+        test_values = [inputs_tuple[0], inputs_tuple[1], inputs_tuple[2]]
+        result = op_config.op_func(cond, x, y)
     else:
         raise NotImplementedError(
             f"Operations with {len(inputs_tuple)} inputs not yet supported"
@@ -226,6 +236,9 @@ def test_operation_preserves_dtype(tmp_path, op_name, data):
         assert np.issubdtype(output_dtype, np.floating), (
             f"Division should produce float, got {output_dtype}"
         )
+    elif op_name == "eq":
+        # Comparison operations produce bool
+        assert output_dtype == np.bool_, f"EQ should produce bool, got {output_dtype}"
     else:
         # Most operations preserve dtype
         assert output_dtype == input_dtype, (

@@ -1,10 +1,57 @@
-"""ONNX conversion for shape operations."""
+"""ONNX conversion for shape operations.
+
+This module provides ONNX export support for PyTensor operations related to
+tensor shapes, dimensions, and scalar conversions.
+
+Supported Operations
+--------------------
+Shape_i:
+    Extracts a specific dimension from a tensor's shape.
+    Decomposes into ONNX: Shape → Gather → Squeeze
+
+Reshape:
+    Changes tensor shape while preserving total elements.
+    Maps directly to ONNX Reshape operator.
+
+DimShuffle:
+    Reorders, adds, or removes dimensions.
+    Decomposes into: Squeeze → Transpose → Unsqueeze
+
+AllocEmpty:
+    Allocates uninitialized tensor (exported as zero-filled).
+    Uses ONNX ConstantOfShape operator.
+
+MakeVector:
+    Creates 1D vector from scalar inputs.
+    Decomposes into: Unsqueeze → Concat
+
+ScalarFromTensor:
+    Extracts scalar value from 0-dimensional tensor.
+    Maps to ONNX Identity (no-op since ONNX scalars are 0-D tensors).
+
+DeepCopyOp:
+    Creates tensor copy (not needed in ONNX).
+    Maps to ONNX Identity.
+
+YOLO Usage Pattern
+------------------
+ScalarFromTensor is commonly used in YOLO models for dimension validation:
+
+    # Compare dimensions
+    eq_result = Eq(dim1, dim2)  # Returns 0-D boolean tensor
+
+    # Convert to scalar for assertions/conditionals
+    is_match = ScalarFromTensor(eq_result)  # Extract scalar boolean
+
+    # Use in conditional logic
+    result = Switch(is_match, value_if_true, value_if_false)
+"""
 
 import numpy as np
 
 from pytensor.compile.ops import DeepCopyOp
 from pytensor.link.onnx.dispatch.basic import onnx_funcify
-from pytensor.tensor.basic import AllocEmpty, MakeVector
+from pytensor.tensor.basic import Alloc, AllocEmpty, MakeVector, ScalarFromTensor
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.shape import Reshape, Shape_i
 
@@ -93,6 +140,41 @@ def onnx_funcify_Shape_i(op, node, var_names, get_var_name, **kwargs):
     )
 
     return nodes
+
+
+@onnx_funcify.register(ScalarFromTensor)
+def onnx_funcify_ScalarFromTensor(op, node, var_names, get_var_name, **kwargs):
+    """Convert ScalarFromTensor to ONNX Identity node.
+
+    ScalarFromTensor extracts a scalar value from a 0-dimensional tensor.
+    In ONNX, scalars ARE 0-dimensional tensors, so no conversion needed.
+    We use Identity to represent this no-op transformation clearly.
+
+    Parameters
+    ----------
+    op : ScalarFromTensor
+        The operation instance
+    node : Apply
+        The apply node
+    var_names : dict
+        Variable name mapping
+    get_var_name : callable
+        Function to get variable names
+
+    Returns
+    -------
+    NodeProto
+        ONNX Identity node
+    """
+    input_names = [get_var_name(inp) for inp in node.inputs]
+    output_names = [get_var_name(out) for out in node.outputs]
+
+    return helper.make_node(
+        "Identity",
+        inputs=input_names,
+        outputs=output_names,
+        name=f"Identity_{output_names[0]}",
+    )
 
 
 @onnx_funcify.register(Reshape)
@@ -386,6 +468,151 @@ def onnx_funcify_DimShuffle(op, node, var_names, get_var_name, **kwargs):
                     name=f"Identity_{output_names[0]}",
                 )
             )
+
+    return nodes
+
+
+@onnx_funcify.register(Alloc)
+def onnx_funcify_Alloc(op, node, var_names, get_var_name, **kwargs):
+    """Convert Alloc to ONNX Expand.
+
+    Alloc broadcasts a value to a specified shape.
+
+    Node structure:
+    - inputs[0]: The value to broadcast
+    - inputs[1:]: Shape dimensions (scalars)
+
+    ONNX Expand takes:
+    - input[0]: The value to expand
+    - input[1]: The target shape (1D tensor)
+
+    We need to pack the shape dimensions into a single tensor.
+    """
+    input_names = [get_var_name(inp) for inp in node.inputs]
+    output_names = [get_var_name(out) for out in node.outputs]
+
+    nodes = []
+
+    # First input is the value to broadcast
+    value_name = input_names[0]
+    shape_input_names = input_names[1:]  # Remaining inputs are shape dimensions
+
+    # Pack shape dimensions into a single 1D tensor
+    shape_name = f"shape_{output_names[0]}"
+
+    if len(shape_input_names) == 1:
+        # Single shape input - check if it's already a vector
+        shape_input = node.inputs[1]
+        if shape_input.type.ndim == 1:
+            # Already a 1D tensor, just cast to int64
+            nodes.append(
+                helper.make_node(
+                    "Cast",
+                    inputs=[shape_input_names[0]],
+                    outputs=[shape_name],
+                    to=7,  # TensorProto.INT64
+                    name=f"CastShape_{output_names[0]}",
+                )
+            )
+        else:
+            # Scalar dimension - cast and unsqueeze to 1D
+            cast_name = f"cast_{output_names[0]}"
+            nodes.append(
+                helper.make_node(
+                    "Cast",
+                    inputs=[shape_input_names[0]],
+                    outputs=[cast_name],
+                    to=7,  # TensorProto.INT64
+                    name=f"Cast_{output_names[0]}",
+                )
+            )
+
+            # Unsqueeze to make it 1D
+            axes_name = f"axes_{output_names[0]}"
+            axes_tensor = numpy_helper.from_array(
+                np.array([0], dtype=np.int64), name=""
+            )
+            nodes.append(
+                helper.make_node(
+                    "Constant",
+                    inputs=[],
+                    outputs=[axes_name],
+                    value=axes_tensor,
+                    name=f"ConstAxes_{output_names[0]}",
+                )
+            )
+
+            nodes.append(
+                helper.make_node(
+                    "Unsqueeze",
+                    inputs=[cast_name, axes_name],
+                    outputs=[shape_name],
+                    name=f"Unsqueeze_{output_names[0]}",
+                )
+            )
+    else:
+        # Multiple shape dimensions - concat them into a shape vector
+        unsqueezed_names = []
+        for i, dim_name in enumerate(shape_input_names):
+            # Cast to int64
+            cast_name = f"cast_dim_{i}_{output_names[0]}"
+            nodes.append(
+                helper.make_node(
+                    "Cast",
+                    inputs=[dim_name],
+                    outputs=[cast_name],
+                    to=7,  # TensorProto.INT64
+                    name=f"Cast_{i}_{output_names[0]}",
+                )
+            )
+
+            # Unsqueeze to 1D
+            unsqueezed = f"unsqueezed_dim_{i}_{output_names[0]}"
+            axes_name = f"axes_{i}_{output_names[0]}"
+
+            axes_tensor = numpy_helper.from_array(
+                np.array([0], dtype=np.int64), name=""
+            )
+            nodes.append(
+                helper.make_node(
+                    "Constant",
+                    inputs=[],
+                    outputs=[axes_name],
+                    value=axes_tensor,
+                    name=f"ConstAxes_{i}_{output_names[0]}",
+                )
+            )
+
+            nodes.append(
+                helper.make_node(
+                    "Unsqueeze",
+                    inputs=[cast_name, axes_name],
+                    outputs=[unsqueezed],
+                    name=f"Unsqueeze_{i}_{output_names[0]}",
+                )
+            )
+            unsqueezed_names.append(unsqueezed)
+
+        # Concat all dimensions into shape vector
+        nodes.append(
+            helper.make_node(
+                "Concat",
+                inputs=unsqueezed_names,
+                outputs=[shape_name],
+                axis=0,
+                name=f"ConcatShape_{output_names[0]}",
+            )
+        )
+
+    # Now use Expand to broadcast value to shape
+    nodes.append(
+        helper.make_node(
+            "Expand",
+            inputs=[value_name, shape_name],
+            outputs=output_names,
+            name=f"Expand_{output_names[0]}",
+        )
+    )
 
     return nodes
 

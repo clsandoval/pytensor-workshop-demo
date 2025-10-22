@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from hypothesis import strategies as st
+from hypothesis.extra.numpy import arrays
 
 import pytensor.tensor as pt
 from tests.link.onnx.strategies.core import onnx_dtypes, onnx_tensor, valid_shapes
@@ -119,6 +120,47 @@ def binary_broadcastable_inputs(draw, dtypes=None):
 
     x = draw(onnx_tensor(dtype=dtype, shape=base_shape))
     y = draw(onnx_tensor(dtype=dtype, shape=shape_y))
+
+    return (x, y)
+
+
+@st.composite
+def binary_int_division_inputs(draw):
+    """Generate inputs for integer division (floor_div).
+
+    Ensures divisor is never zero.
+
+    Returns
+    -------
+    tuple
+        (x, y) - Two integer tensors where y != 0
+    """
+    # Only integer types for floor division
+    dtypes = [np.int32, np.int64]
+    dtype = draw(st.sampled_from(dtypes))
+
+    # Generate base shape
+    base_shape = draw(valid_shapes(min_rank=1, max_rank=3, min_dim=1, max_dim=5))
+
+    # Generate broadcasting variant for second tensor
+    broadcast_pattern = draw(st.sampled_from(["same", "broadcast_dims", "prefix"]))
+
+    if broadcast_pattern == "same":
+        shape_y = base_shape
+    elif broadcast_pattern == "broadcast_dims":
+        shape_y = tuple(
+            1 if draw(st.booleans()) and dim > 1 else dim for dim in base_shape
+        )
+    else:  # prefix
+        suffix_len = draw(st.integers(1, len(base_shape)))
+        shape_y = base_shape[-suffix_len:]
+
+    # Generate tensors
+    x = draw(onnx_tensor(dtype=dtype, shape=base_shape))
+    y = draw(onnx_tensor(dtype=dtype, shape=shape_y))
+
+    # Ensure y has no zeros (avoid division by zero)
+    y = np.where(y == 0, 1, y)
 
     return (x, y)
 
@@ -314,6 +356,75 @@ def conv2d_inputs(draw):
     return (input_tensor, kernel_tensor)
 
 
+@st.composite
+def switch_inputs(draw, dtypes=None):
+    """Generate inputs for Switch operation (ternary: condition, then, else).
+
+    Generates:
+    - Boolean condition tensor
+    - Two value tensors (then and else) with same dtype
+    - Compatible broadcasting shapes
+
+    Parameters
+    ----------
+    dtypes : list or None
+        Allowed dtypes for value tensors. If None, uses all ONNX dtypes
+
+    Returns
+    -------
+    tuple
+        (condition, then_value, else_value)
+    """
+    if dtypes is None:
+        dtypes = [np.float32, np.float64, np.int32, np.int64]
+
+    # Generate compatible dtype for value tensors
+    dtype = draw(st.sampled_from(dtypes))
+
+    # Generate base shape for values
+    base_shape = draw(valid_shapes(min_rank=1, max_rank=3, min_dim=1, max_dim=5))
+
+    # Generate then_value with base shape
+    then_val = draw(onnx_tensor(dtype=dtype, shape=base_shape))
+
+    # Generate else_value with potentially different but compatible shape
+    broadcast_pattern = draw(st.sampled_from(["same", "broadcast_dims", "prefix"]))
+
+    if broadcast_pattern == "same":
+        else_shape = base_shape
+    elif broadcast_pattern == "broadcast_dims":
+        # Randomly make some dimensions 1
+        else_shape = tuple(
+            1 if draw(st.booleans()) and dim > 1 else dim for dim in base_shape
+        )
+    else:  # prefix
+        # Take suffix of base_shape
+        suffix_len = draw(st.integers(1, len(base_shape)))
+        else_shape = base_shape[-suffix_len:]
+
+    else_val = draw(onnx_tensor(dtype=dtype, shape=else_shape))
+
+    # Generate condition with compatible broadcasting shape
+    # Condition can be scalar, same as then/else, or broadcast-compatible
+    condition_pattern = draw(st.sampled_from(["same", "scalar", "broadcast_dims"]))
+
+    if condition_pattern == "same":
+        condition_shape = base_shape
+    elif condition_pattern == "scalar":
+        condition_shape = ()
+    else:  # broadcast_dims
+        condition_shape = tuple(
+            1 if draw(st.booleans()) and dim > 1 else dim for dim in base_shape
+        )
+
+    # Generate boolean condition
+    condition_val = draw(
+        arrays(dtype=np.bool_, shape=condition_shape, elements=st.booleans())
+    )
+
+    return (condition_val, then_val, else_val)
+
+
 # Operation Registry
 # This is the central registry that maps operation names to their test configurations
 ONNX_OPERATIONS = {
@@ -342,6 +453,20 @@ ONNX_OPERATIONS = {
         valid_dtypes=["float32", "float64"],
         category="elemwise",
         notes="Division only defined for floating point types",
+    ),
+    "floor_div": OperationConfig(
+        op_func=lambda x, y: x // y,
+        input_strategy=binary_int_division_inputs(),
+        valid_dtypes=["int32", "int64"],
+        category="elemwise",
+        notes="Floor division for integer types, maps to ONNX Div",
+    ),
+    "eq": OperationConfig(
+        op_func=pt.eq,
+        input_strategy=binary_broadcastable_inputs(),
+        valid_dtypes=["float32", "float64", "int32", "int64"],
+        category="elemwise",
+        notes="Comparison operation, output dtype is bool",
     ),
     # Elemwise Unary Operations
     "neg": OperationConfig(
@@ -390,5 +515,13 @@ ONNX_OPERATIONS = {
         input_strategy=reshape_inputs(),
         valid_dtypes=["float32", "float64", "int32", "int64"],
         category="shape",
+    ),
+    # Conditional Operations
+    "switch": OperationConfig(
+        op_func=lambda cond, x, y: pt.switch(cond, x, y),
+        input_strategy=switch_inputs(),
+        valid_dtypes=["float32", "float64", "int32", "int64"],
+        category="elemwise",
+        notes="Conditional selection (ternary), maps to ONNX Where",
     ),
 }
