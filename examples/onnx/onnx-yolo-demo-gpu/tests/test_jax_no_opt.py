@@ -8,7 +8,6 @@ import os
 os.environ["PYTENSOR_FLAGS"] = "floatX=float32,optimizer=None"
 
 import numpy as np
-import pytensor.config
 
 import pytensor
 

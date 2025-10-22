@@ -84,8 +84,6 @@ def test_model_compile_with_explicit_config():
         return
 
     # Double-check and force configuration
-    import pytensor.config
-
     pytensor.config.optimizer_excluding = "shape_unsafe"
     pytensor.config.floatX = "float32"
 

@@ -17,7 +17,6 @@ os.environ["PYTENSOR_FLAGS_FLOATX"] = "float32"
 from datetime import timedelta
 
 import numpy as np
-import pytensor.config
 import pytest
 from hypothesis import HealthCheck, Phase, settings
 

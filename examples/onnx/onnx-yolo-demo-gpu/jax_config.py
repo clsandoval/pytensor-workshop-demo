@@ -10,8 +10,6 @@ os.environ["PYTENSOR_FLAGS"] = (
     "optimizer_excluding=shape_unsafe"
 )
 
-import pytensor.config
-
 import pytensor
 
 
