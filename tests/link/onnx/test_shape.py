@@ -83,7 +83,7 @@ def test_dimshuffle_transpose_3d(tmp_path):
 
 
 def test_dimshuffle_transpose_and_unsqueeze(tmp_path):
-    """Test transpose combined with unsqueeze - currently FAILS (bug)."""
+    """Test transpose combined with unsqueeze."""
     x = pt.matrix("x", dtype="float32")
     # Input: (2, 3), Output: (3, 1, 2)
     # This requires: Transpose(1,0) → Unsqueeze(axis=1)
@@ -94,7 +94,7 @@ def test_dimshuffle_transpose_and_unsqueeze(tmp_path):
 
 
 def test_dimshuffle_squeeze_and_transpose(tmp_path):
-    """Test squeeze combined with transpose - currently FAILS (bug)."""
+    """Test squeeze combined with transpose."""
     x = pt.tensor(dtype="float32", shape=(2, 1, 3), name="x")
     # Input: (2, 1, 3), Output: (3, 2)
     # This requires: Squeeze(axis=1) → Transpose(1,0)
@@ -105,7 +105,7 @@ def test_dimshuffle_squeeze_and_transpose(tmp_path):
 
 
 def test_dimshuffle_unsqueeze_and_transpose(tmp_path):
-    """Test unsqueeze combined with transpose - currently FAILS (bug)."""
+    """Test unsqueeze combined with transpose."""
     x = pt.matrix("x", dtype="float32")
     # Input: (2, 3), Output: (1, 3, 2)
     # This requires: Transpose(1,0) → Unsqueeze(axis=0)
