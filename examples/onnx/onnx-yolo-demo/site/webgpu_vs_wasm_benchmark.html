@@ -209,20 +209,24 @@
         }
 
         .video-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
             margin: 20px 0;
         }
 
         .video-box {
             text-align: center;
+            width: 100%;
+            max-width: 640px;
         }
 
         video,
         canvas {
             width: 100%;
-            max-width: 400px;
+            max-width: 640px;
+            height: auto;
             border-radius: 12px;
             border: 3px solid #667eea;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
@@ -256,74 +260,21 @@
 
 <body>
     <div class="container">
-        <h1>⚡ WebGPU vs WASM Benchmark - YOLO11n</h1>
+        <h1>🚀 PyTensor ONNX Backend Demo - YOLO11n</h1>
 
         <div class="info-box">
-            <strong>Performance Comparison Test</strong><br>
-            This test compares ONNX Runtime Web's WebGPU and WASM execution providers
-            running YOLO11n (11MB object detection model). This is a real-world model
-            where WebGPU should show significant speedup over WASM!
-        </div>
-
-        <div class="comparison-grid">
-            <div class="backend-card" id="webgpu-card">
-                <h2>🚀 WebGPU (GPU)</h2>
-                <div class="status loading" id="webgpu-status">Checking...</div>
-                <div class="metric">
-                    <span class="metric-label">Average Time</span>
-                    <span class="metric-value" id="webgpu-avg">-</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Min Time</span>
-                    <span class="metric-value" id="webgpu-min">-</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Max Time</span>
-                    <span class="metric-value" id="webgpu-max">-</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Throughput</span>
-                    <span class="metric-value" id="webgpu-fps">-</span>
-                </div>
-            </div>
-
-            <div class="backend-card" id="wasm-card">
-                <h2>🔧 WASM (CPU)</h2>
-                <div class="status loading" id="wasm-status">Checking...</div>
-                <div class="metric">
-                    <span class="metric-label">Average Time</span>
-                    <span class="metric-value" id="wasm-avg">-</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Min Time</span>
-                    <span class="metric-value" id="wasm-min">-</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Max Time</span>
-                    <span class="metric-value" id="wasm-max">-</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Throughput</span>
-                    <span class="metric-value" id="wasm-fps">-</span>
-                </div>
-            </div>
-        </div>
-
-        <div id="speedup-display" style="display:none;" class="speedup">
-            <div class="speedup-label">WebGPU Speedup</div>
-            <div class="speedup-value" id="speedup-value">-</div>
-            <div class="speedup-label">times faster than WASM</div>
-        </div>
-
-        <div class="button-group">
-            <button id="benchmark-button" onclick="runComparison()" disabled>Run Benchmark (50 iterations)</button>
+            <strong>Real-Time Object Detection Powered by PyTensor → ONNX</strong><br>
+            This demo showcases a YOLO11n model (11MB) trained entirely using PyTensor with JAX on GPU,
+            exported to ONNX format, and now running in your browser! The model runs on both WebGPU (GPU acceleration)
+            and WASM (CPU) backends via ONNX Runtime Web. Try the live webcam demo below, or run the benchmark
+            to see the performance difference between GPU and CPU execution.
         </div>
 
         <div class="video-section">
-            <h2>📹 Real-Time Video Processing Test</h2>
+            <h2>📹 Live Object Detection Demo</h2>
             <p style="color: #6c757d; margin-bottom: 20px;">
-                Upload a video file or use your webcam to see real-time inference performance.
-                This shows you the actual FPS you'd get in a real application!
+                Start your webcam or upload a video to see real-time object detection in action!
+                Switch between WebGPU (GPU) and WASM (CPU) backends to compare performance.
             </p>
 
             <div class="button-group">
@@ -341,12 +292,9 @@
 
             <div class="video-container">
                 <div class="video-box">
-                    <h3>Input</h3>
+                    <h3>Live Object Detection</h3>
                     <video id="input-video" autoplay muted playsinline style="display:none;"></video>
-                    <canvas id="input-canvas" width="320" height="320"></canvas>
-                </div>
-                <div class="video-box">
-                    <h3>Live Performance</h3>
+                    <canvas id="input-canvas" width="640" height="480"></canvas>
                     <div class="video-stats">
                         <div class="video-stat">
                             <span class="video-stat-label">Current FPS:</span>
@@ -370,6 +318,67 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="video-section">
+            <h2>📊 Performance Benchmark</h2>
+            <p style="color: #6c757d; margin-bottom: 20px;">
+                Run a detailed benchmark to compare WebGPU vs WASM performance over 50 iterations.
+            </p>
+
+            <div class="comparison-grid">
+                <div class="backend-card" id="webgpu-card">
+                    <h2>🚀 WebGPU (GPU)</h2>
+                    <div class="status loading" id="webgpu-status">Checking...</div>
+                    <div class="metric">
+                        <span class="metric-label">Average Time</span>
+                        <span class="metric-value" id="webgpu-avg">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Min Time</span>
+                        <span class="metric-value" id="webgpu-min">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Max Time</span>
+                        <span class="metric-value" id="webgpu-max">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Throughput</span>
+                        <span class="metric-value" id="webgpu-fps">-</span>
+                    </div>
+                </div>
+
+                <div class="backend-card" id="wasm-card">
+                    <h2>🔧 WASM (CPU)</h2>
+                    <div class="status loading" id="wasm-status">Checking...</div>
+                    <div class="metric">
+                        <span class="metric-label">Average Time</span>
+                        <span class="metric-value" id="wasm-avg">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Min Time</span>
+                        <span class="metric-value" id="wasm-min">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Max Time</span>
+                        <span class="metric-value" id="wasm-max">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Throughput</span>
+                        <span class="metric-value" id="wasm-fps">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="speedup-display" style="display:none;" class="speedup">
+                <div class="speedup-label">WebGPU Speedup</div>
+                <div class="speedup-value" id="speedup-value">-</div>
+                <div class="speedup-label">times faster than WASM</div>
+            </div>
+
+            <div class="button-group">
+                <button id="benchmark-button" onclick="runComparison()" disabled>Run Benchmark (50 iterations)</button>
             </div>
         </div>
 
@@ -459,7 +468,7 @@
                 updateStatus('webgpu', 'loading', 'Loading...');
                 log('\nLoading WebGPU session...');
 
-                webgpuSession = await ort.InferenceSession.create('yolo11n.onnx', {
+                webgpuSession = await ort.InferenceSession.create('yolo11n_320.onnx', {
                     executionProviders: ['webgpu']
                 });
 
@@ -487,7 +496,7 @@
                 updateStatus('wasm', 'loading', 'Loading...');
                 log('Loading WASM session...');
 
-                wasmSession = await ort.InferenceSession.create('yolo11n.onnx', {
+                wasmSession = await ort.InferenceSession.create('yolo11n_320.onnx', {
                     executionProviders: ['wasm']
                 });
 
@@ -689,13 +698,13 @@
         }
 
         function getVideoTensor(video) {
-            // Create a temporary canvas to extract frame
+            // Create a temporary canvas to extract frame (model expects 320x320)
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = 320;
             tempCanvas.height = 320;
             const tempCtx = tempCanvas.getContext('2d');
 
-            // Draw video frame to canvas
+            // Draw video frame to canvas (resize to 320x320 for model input)
             tempCtx.drawImage(video, 0, 0, 320, 320);
 
             const imageData = tempCtx.getImageData(0, 0, 320, 320);
@@ -717,6 +726,13 @@
             // 8400 = number of detection candidates
             const data = output.data;
             const dims = output.dims;
+
+            // Debug: log output shape on first call
+            if (typeof parseYOLOOutput.loggedShape === 'undefined') {
+                console.log('YOLO output shape:', dims);
+                console.log('Output data length:', data.length);
+                parseYOLOOutput.loggedShape = true;
+            }
 
             const numDetections = dims[2]; // 8400
             const boxes = [];
@@ -807,12 +823,17 @@
             ctx.lineWidth = 3;
             ctx.font = '16px Arial';
 
+            // YOLO coordinates are in 320x320 space
+            // We need to scale them to the display canvas size
+            const scaleX = width / 320;
+            const scaleY = height / 320;
+
             for (const box of boxes) {
                 // Scale coordinates to canvas size
-                const x1 = box.x1 * width / 320;
-                const y1 = box.y1 * height / 320;
-                const x2 = box.x2 * width / 320;
-                const y2 = box.y2 * height / 320;
+                const x1 = box.x1 * scaleX;
+                const y1 = box.y1 * scaleY;
+                const x2 = box.x2 * scaleX;
+                const y2 = box.y2 * scaleY;
                 const w = x2 - x1;
                 const h = y2 - y1;
 
@@ -864,6 +885,11 @@
                 const output = results[session.outputNames[0]];
                 const detections = parseYOLOOutput(output);
 
+                // Debug: log detection info occasionally
+                if (frameCount % 60 === 0) {
+                    console.log(`Frame ${frameCount}: ${detections.length} detections`, detections.slice(0, 3));
+                }
+
                 // Update stats
                 frameCount++;
                 const fps = 1000 / inferenceTime;
@@ -882,11 +908,11 @@
                 // Draw frame to display canvas
                 canvasElement = document.getElementById('input-canvas');
                 canvasCtx = canvasElement.getContext('2d');
-                canvasCtx.clearRect(0, 0, 320, 320);
-                canvasCtx.drawImage(videoElement, 0, 0, 320, 320);
+                canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+                canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
 
                 // Draw bounding boxes
-                drawBoundingBoxes(canvasCtx, detections, 320, 320);
+                drawBoundingBoxes(canvasCtx, detections, canvasElement.width, canvasElement.height);
 
                 // Log detections if any found
                 if (detections.length > 0 && frameCount % 30 === 0) {
