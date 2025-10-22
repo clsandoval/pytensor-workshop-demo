@@ -1,32 +1,56 @@
 [project]
-name = "yolo11n-pytensor"
+name = "onnx-yolo-demo"
 version = "0.1.0"
-description = "YOLO11n implementation using PyTensor with JAX backend"
+description = "YOLO11n Object Detection Demo with PyTensor, JAX, and ONNX"
 requires-python = ">=3.11"
 dependencies = [
-    "numpy>=1.24.0",
-    "scipy>=1.10.0",
-    "jax[cuda12]>=0.4.20",
-    "pillow>=10.0.0",
-    "tqdm>=4.65.0",
-    "pycocotools>=2.0.6",
-    "requests>=2.31.0",
-    "wandb>=0.15.0",
-    "pyyaml>=6.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-xdist>=3.0.0",  # parallel test execution
+    # NOTE: pytensor should be installed from root repo in editable mode FIRST:
+    #   cd /path/to/pytensor && uv pip install -e ".[development,onnx]"
+    # We do NOT include pytensor here to avoid overriding the local dev version
+    "numpy>=2.0",
+    "jax[cpu]>=0.4.20",
+    "onnx>=1.14.0",
+    "onnxruntime>=1.16.0",
+    "pytest>=7.0",
+    "pytest-cov>=4.0.0",
+    "pytest-benchmark>=4.0.0",
+    "hypothesis>=6.100.0",
+    "selenium>=4.15.0",
+    "webdriver-manager>=4.0.0",
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["yolo*"]
+exclude = ["tests*", "site*"]
 
 [tool.pytest.ini_options]
-testpaths = ["testing"]
-python_files = ["test_*.py"]
-python_functions = ["test_*"]
-addopts = "-v --tb=short"
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests that require GPU",
+    "onnx: marks tests that require ONNX Runtime",
+    "browser: marks tests that require browser (Selenium)",
+    "performance: marks performance benchmarks (environment-dependent)",
+]
+addopts = "--durations=20 -v"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["yolo"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

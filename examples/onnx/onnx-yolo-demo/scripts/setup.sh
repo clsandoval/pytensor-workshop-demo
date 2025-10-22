@@ -81,18 +81,35 @@ echo ""
 echo "[5/7] Installing dependencies with uv..."
 echo "This may take several minutes..."
 
-# Install PyTensor from parent directory (editable)
+# CRITICAL: Install PyTensor from parent directory in EDITABLE mode FIRST
+# This ensures the local development version is used, not PyPI
+echo "Installing PyTensor from source (editable)..."
 cd ../../../
-uv pip install -e .
+uv pip install -e ".[development,onnx]"
+
+# Verify PyTensor is installed from source
+echo "Verifying PyTensor installation..."
+PYTENSOR_LOCATION=$(uv pip show pytensor | grep "Location:" | awk '{print $2}')
+if [[ "$PYTENSOR_LOCATION" == *"site-packages"* ]]; then
+    echo "❌ ERROR: PyTensor was installed from PyPI, not from source!"
+    echo "   Location: $PYTENSOR_LOCATION"
+    echo "   Expected: /path/to/pytensor (source directory)"
+    exit 1
+fi
+echo "✓ PyTensor installed from source: $PYTENSOR_LOCATION"
 
 # Return to demo directory
 cd examples/onnx/onnx-yolo-demo/
 
-# Sync all dependencies from pyproject.toml
-uv sync
+# Install demo dependencies WITHOUT uv sync (which would override editable PyTensor)
+# Using uv pip install respects already-installed editable packages
+echo "Installing YOLO demo dependencies..."
+uv pip install -e .
 
-# Install dev dependencies
-uv pip install -e ".[dev]"
+# Note: We do NOT use "uv sync" here because:
+# - uv sync reads/creates uv.lock with pinned versions from PyPI
+# - This would reinstall pytensor from PyPI, overriding our editable install
+# - uv pip install respects already-installed packages (including editable ones)
 
 echo "✓ All Python packages installed"
 echo ""
@@ -161,6 +178,7 @@ echo "4. After training completes, download the ONNX model:"
 echo "   scp user@server:$(pwd)/checkpoints/yolo11n_best.onnx ."
 echo ""
 echo "5. To run tests:"
-echo "   uv run pytest testing/ -v"
+echo "   uv run pytest tests/ -v"
+echo "   # Or with specific profile: HYPOTHESIS_PROFILE=dev uv run pytest tests/ -v"
 echo ""
 echo "=========================================="

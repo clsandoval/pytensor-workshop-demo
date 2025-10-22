@@ -8,9 +8,9 @@ Output: Detection predictions at 3 scales
 IMPORTANT: Set PYTENSOR_FLAGS='floatX=float32' before importing this module!
 """
 
-from blocks import C2PSA, SPPF, C3k2, ConvBNSiLU
-
 import pytensor.tensor as pt
+
+from .blocks import C2PSA, SPPF, C3k2, ConvBNSiLU
 
 
 class YOLO11nBackbone:
