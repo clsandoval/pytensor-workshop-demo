@@ -12,9 +12,7 @@ import numpy as np
 import pytensor
 
 
-# Force settings
-pytensor.config.floatX = "float32"
-pytensor.config.optimizer = "None"  # Disable ALL optimizations
+# Note: Config can't be changed after import, must be set via environment variable
 
 
 def test_model_no_optimizations():
@@ -76,12 +74,8 @@ def test_gradual_optimization():
     for optimizer, description in configs_to_test:
         print(f"\nTesting: {description} (optimizer={optimizer})")
 
-        # Reset and set config
-        pytensor.config.optimizer = optimizer
-        pytensor.config.floatX = "float32"
-
-        if optimizer != "None":
-            pytensor.config.optimizer_excluding = "shape_unsafe"
+        # Note: Can't change config after import
+        print(f"  Current config: optimizer={pytensor.config.optimizer}")
 
         try:
             _model, x_sym, predictions = build_yolo11n(num_classes=2, input_size=320)

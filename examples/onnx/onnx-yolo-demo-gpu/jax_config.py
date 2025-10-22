@@ -13,14 +13,8 @@ os.environ["PYTENSOR_FLAGS"] = (
 import pytensor
 
 
-# Force additional settings programmatically
-pytensor.config.floatX = "float32"
-pytensor.config.optimizer_excluding = "shape_unsafe"
-
-# Optionally try disabling more optimizations if needed
-# pytensor.config.optimizer = "None"  # Nuclear option: disable ALL optimizations
-
-print("JAX Configuration Applied:")
+# Note: Config can't be changed after import - must be set via environment variable
+print("JAX Configuration (read-only):")
 print(f"  floatX: {pytensor.config.floatX}")
 print(f"  optimizer: {pytensor.config.optimizer}")
 print(f"  optimizer_excluding: {pytensor.config.optimizer_excluding}")

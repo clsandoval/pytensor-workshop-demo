@@ -83,11 +83,8 @@ def test_model_compile_with_explicit_config():
         print("JAX not available, skipping test")
         return
 
-    # Double-check and force configuration
-    pytensor.config.optimizer_excluding = "shape_unsafe"
-    pytensor.config.floatX = "float32"
-
-    print(f"Forced optimizer_excluding: {pytensor.config.optimizer_excluding}")
+    # Check current configuration
+    print(f"Current optimizer_excluding: {pytensor.config.optimizer_excluding}")
 
     # Import model AFTER setting config
     from yolo.model import build_yolo11n

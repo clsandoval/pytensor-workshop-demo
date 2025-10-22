@@ -20,13 +20,9 @@ import numpy as np
 import pytest
 from hypothesis import HealthCheck, Phase, settings
 
-# After imports, verify and force configuration
+# After imports, verify configuration (read-only)
 import pytensor
 
-
-# Force the configuration programmatically as a backup
-pytensor.config.floatX = "float32"
-pytensor.config.optimizer_excluding = "shape_unsafe"
 
 # Print configuration for debugging (will show in pytest output with -s flag)
 print(
