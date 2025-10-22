@@ -5,13 +5,35 @@
 import os
 
 
-os.environ["PYTENSOR_FLAGS"] = "floatX=float32,optimizer_excluding=shape_unsafe"
+# Set multiple ways to ensure it takes effect
+os.environ["PYTENSOR_FLAGS"] = (
+    "floatX=float32,optimizer_excluding=shape_unsafe,optimizer=fast_compile"
+)
+
+# Also try setting individual environment variables as fallback
+os.environ["PYTENSOR_FLAGS_OPTIMIZER_EXCLUDING"] = "shape_unsafe"
+os.environ["PYTENSOR_FLAGS_FLOATX"] = "float32"
 
 from datetime import timedelta
 
 import numpy as np
+import pytensor.config
 import pytest
 from hypothesis import HealthCheck, Phase, settings
+
+# After imports, verify and force configuration
+import pytensor
+
+
+# Force the configuration programmatically as a backup
+pytensor.config.floatX = "float32"
+pytensor.config.optimizer_excluding = "shape_unsafe"
+
+# Print configuration for debugging (will show in pytest output with -s flag)
+print(
+    f"PyTensor config in conftest: floatX={pytensor.config.floatX}, "
+    f"optimizer_excluding={pytensor.config.optimizer_excluding}"
+)
 
 
 # Register Hypothesis profiles
