@@ -59,7 +59,7 @@ try:
         # These graph optimizations introduce dynamic shape computations that
         # violate JAX JIT's requirement for concrete shape values
         # See: thoughts/shared/research/2025-01-15_jax-jit-issues-yolo-gpu-training.md
-        pytensor.config.optimizer_excluding = "shape_unsafe"
+
         print(f"✓ Optimizer exclusions set: {pytensor.config.optimizer_excluding}")
 
         # Use JAX mode for compilation (now with fixed batch normalization)
