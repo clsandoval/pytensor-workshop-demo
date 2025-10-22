@@ -5,7 +5,7 @@
 import os
 
 
-os.environ["PYTENSOR_FLAGS"] = "floatX=float32"
+os.environ["PYTENSOR_FLAGS"] = "floatX=float32,optimizer_excluding=shape_unsafe"
 
 from datetime import timedelta
 

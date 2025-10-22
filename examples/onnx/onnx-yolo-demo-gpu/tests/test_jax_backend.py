@@ -103,9 +103,7 @@ def test_jax_gradient_flow():
 
     # Get model parameters
     params = [
-        p
-        for p in model.backbone.get_params() + model.head.get_params()
-        if hasattr(p, "name")
+        p for p in model.backbone.params + model.head.params if hasattr(p, "name")
     ]
 
     if len(params) == 0:
