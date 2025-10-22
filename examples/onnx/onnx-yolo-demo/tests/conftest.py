@@ -247,18 +247,42 @@ def local_server(tmp_path_factory):
 @pytest.fixture
 def exported_yolo_model(local_server):
     """Export YOLO11n model and make available on local server."""
+    import onnx
+    from onnx import shape_inference
     from yolo.model import build_yolo11n
 
     import pytensor
+    from pytensor import tensor as pt
+    from pytensor.graph.replace import clone_replace
     from pytensor.link.onnx import export_onnx
 
+    # Build model
     _model, x_sym, predictions = build_yolo11n(num_classes=2, input_size=320)
-    f = pytensor.function([x_sym], predictions)
+
+    # Create concrete input shape (required for WebGPU)
+    # WebGPU needs concrete shapes for kernel compilation
+    x_concrete = pt.TensorType("float32", shape=(1, 3, 320, 320))("x")
+
+    # Replace symbolic input with concrete input
+    concrete_predictions = [
+        clone_replace(pred, {x_sym: x_concrete}) for pred in predictions
+    ]
+
+    # Compile PyTensor function with concrete shapes
+    f = pytensor.function([x_concrete], concrete_predictions)
 
     _server_url, server_dir = local_server
     onnx_path = server_dir / "yolo11n.onnx"
 
-    export_onnx(f, str(onnx_path))
+    # Export to ONNX
+    onnx_model = export_onnx(f, str(onnx_path))
+
+    # Apply ONNX shape inference to propagate concrete shapes through the graph
+    # This is critical for WebGPU - it needs to know output shapes at kernel compilation time
+    inferred_model = shape_inference.infer_shapes(onnx_model)
+
+    # Save the model with concrete shapes
+    onnx.save(inferred_model, str(onnx_path))
 
     return onnx_path, f
 
