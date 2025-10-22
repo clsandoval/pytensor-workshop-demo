@@ -1,6 +1,12 @@
 """Pytest configuration for YOLO11n demo tests."""
 
+# CRITICAL: Set PyTensor flags BEFORE any imports that might trigger PyTensor initialization!
+# This must be the FIRST thing that happens to ensure float32 is used consistently.
 import os
+
+
+os.environ["PYTENSOR_FLAGS"] = "floatX=float32"
+
 from datetime import timedelta
 
 import numpy as np
@@ -8,11 +14,31 @@ import pytest
 from hypothesis import HealthCheck, Phase, settings
 
 
-# Set PyTensor flags for float32
-os.environ.setdefault("PYTENSOR_FLAGS", "floatX=float32")
-
-
 # Register Hypothesis profiles
+settings.register_profile(
+    "dev",
+    max_examples=10,
+    deadline=timedelta(milliseconds=500),
+    phases=[Phase.explicit, Phase.reuse, Phase.generate],
+    print_blob=False,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+
+settings.register_profile(
+    "ci",
+    max_examples=50,
+    deadline=None,
+    derandomize=True,
+    print_blob=True,
+)
+
+settings.register_profile(
+    "thorough",
+    max_examples=200,
+    deadline=None,
+)
+
+settings.load_profile(os.getenv("HYPOTHESIS_PROFILE", "dev"))
 settings.register_profile(
     "dev",
     max_examples=10,

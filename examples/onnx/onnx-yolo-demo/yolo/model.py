@@ -1,11 +1,20 @@
-"""
-YOLO11n model architecture for PyTensor.
+"""YOLO11n model architecture for PyTensor.
 
 Implements full YOLO11n nano model for object detection.
 Default input: (batch, 3, 320, 320)
 Output: Detection predictions at 3 scales
 
-IMPORTANT: Set PYTENSOR_FLAGS='floatX=float32' before importing this module!
+⚠️  IMPORTANT: Set PYTENSOR_FLAGS='floatX=float32' before importing this module!
+
+The PyTensor library defaults to float64, which causes ONNX export to create
+invalid models with mixed float32/float64 types. Always set the environment
+variable BEFORE importing:
+
+    import os
+    os.environ["PYTENSOR_FLAGS"] = "floatX=float32"
+    from yolo.model import build_yolo11n
+
+If not set, ONNX models will fail to load in browsers with type mismatch errors.
 """
 
 import pytensor.tensor as pt
