@@ -55,7 +55,11 @@ NPY_RAVEL_AXIS = np.iinfo(np.int32).min
 The value of the numpy C API NPY_RAVEL_AXIS.
 """
 
-NDARRAY_C_VERSION = np._core._multiarray_umath._get_ndarray_c_version()  # type: ignore[attr-defined]
+# Handle numpy 2.0+ (uses _core) and numpy 1.x (uses core)
+try:
+    NDARRAY_C_VERSION = np._core._multiarray_umath._get_ndarray_c_version()  # type: ignore[attr-defined]
+except AttributeError:
+    NDARRAY_C_VERSION = np.core._multiarray_umath._get_ndarray_c_version()  # type: ignore[attr-defined]
 
 
 def __call_excepthooks(type, value, trace):
