@@ -17,6 +17,9 @@ dependencies = [
     "hypothesis>=6.100.0",
     "selenium>=4.15.0",
     "webdriver-manager>=4.0.0",
+    "wandb>=0.15.0",
+    "pillow>=10.0.0",
+    "tqdm>=4.65.0",
 ]
 
 [build-system]
