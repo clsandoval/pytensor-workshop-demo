@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGPU vs WASM Performance Comparison</title>
+    <title>Trained Ultralytics vs Untrained PyTensor ONNX - YOLO11n</title>
     <style>
         * {
             margin: 0;
@@ -73,29 +73,53 @@
             transform: none;
         }
 
-        .comparison-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
+        .benchmark-table {
+            width: 100%;
             margin: 30px 0;
+            border-collapse: separate;
+            border-spacing: 15px;
         }
 
-        .backend-card {
+        .benchmark-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .benchmark-table .backend-header {
+            background: #6c757d;
+            width: 150px;
+        }
+
+        .benchmark-cell {
             background: #f8f9fa;
             padding: 25px;
             border-radius: 12px;
             border: 3px solid transparent;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
         }
 
-        .backend-card.active {
+        .benchmark-cell.active {
             border-color: #667eea;
             box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            transform: scale(1.02);
         }
 
-        .backend-card h2 {
+        .benchmark-cell.winner {
+            background: linear-gradient(135deg, #10b98115 0%, #05966915 100%);
+            border-color: #10b981;
+        }
+
+        .benchmark-cell h3 {
             color: #333;
-            margin-bottom: 20px;
-            font-size: 24px;
+            margin-bottom: 15px;
+            font-size: 16px;
         }
 
         .metric {
@@ -210,26 +234,58 @@
 
         .video-container {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 30px;
+            justify-content: center;
             margin: 20px 0;
         }
 
         .video-box {
             text-align: center;
+            position: relative;
             width: 100%;
-            max-width: 640px;
+        }
+
+        .video-box h3 {
+            margin-bottom: 15px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .trained-label {
+            color: #10b981;
+        }
+
+        .untrained-label {
+            color: #ef4444;
+        }
+
+        .model-indicator {
+            position: absolute;
+            top: 50px;
+            left: 15px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        .trained-indicator {
+            background: rgba(16, 185, 129, 0.9);
         }
 
         video,
         canvas {
             width: 100%;
-            max-width: 640px;
             height: auto;
             border-radius: 12px;
             border: 3px solid #667eea;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .untrained-canvas {
+            border-color: #ef4444;
         }
 
         .video-stats {
@@ -255,130 +311,182 @@
             font-weight: 700;
             color: #667eea;
         }
+
+        .fps-counter {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #10b981;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 18px;
+            z-index: 10;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>🚀 PyTensor ONNX Backend Demo - YOLO11n</h1>
+        <h1>🚀 Trained Ultralytics vs Untrained PyTensor ONNX - YOLO11n</h1>
 
         <div class="info-box">
-            <strong>Real-Time Object Detection Powered by PyTensor → ONNX</strong><br>
-            This demo showcases a YOLO11n model (11MB) trained entirely using PyTensor with JAX on GPU,
-            exported to ONNX format, and now running in your browser! The model runs on both WebGPU (GPU acceleration)
-            and WASM (CPU) backends via ONNX Runtime Web. Try the live webcam demo below, or run the benchmark
-            to see the performance difference between GPU and CPU execution.
+            <strong>See the Difference: Trained Ultralytics vs Untrained PyTensor ONNX Export</strong><br>
+            This demo shows two YOLO11n models side-by-side: the official Ultralytics model fully trained on the COCO dataset (yolo11n_320.onnx)
+            that can accurately detect 80 object classes, and an untrained PyTensor ONNX export (yolo11n.onnx) with random weights
+            that produces meaningless detections. Both models run in real-time using WebGPU acceleration.
+            Notice how the untrained PyTensor export generates random bounding boxes that don't correspond to actual objects!
         </div>
 
         <div class="video-section">
             <h2>📹 Live Object Detection Demo</h2>
             <p style="color: #6c757d; margin-bottom: 20px;">
-                Start your webcam or upload a video to see real-time object detection in action!
-                Switch between WebGPU (GPU) and WASM (CPU) backends to compare performance.
+                Choose between the trained Ultralytics model for accurate object detection or the untrained PyTensor ONNX export to see random noise.
+                Switch models while running to see the dramatic difference!
             </p>
 
             <div class="button-group">
+                <select id="model-select" style="padding: 14px 20px; font-size: 16px; border-radius: 10px; margin-right: 10px;">
+                    <option value="trained">✅ Trained Ultralytics (yolo11n_320.onnx)</option>
+                    <option value="untrained">❌ Untrained PyTensor ONNX (yolo11n.onnx)</option>
+                </select>
                 <button id="webcam-button" onclick="startWebcam()" disabled>Start Webcam</button>
                 <button id="stop-video-button" onclick="stopVideo()" disabled style="display:none;">Stop</button>
                 <input type="file" id="video-upload" accept="video/*" style="display:none;"
                     onchange="loadVideoFile(event)">
                 <button onclick="document.getElementById('video-upload').click()" disabled id="upload-button">Upload
                     Video</button>
-                <select id="backend-select" disabled>
-                    <option value="webgpu">WebGPU</option>
-                    <option value="wasm">WASM</option>
-                </select>
             </div>
 
-            <div class="video-container">
+            <div class="video-container" style="max-width: 800px; margin: 0 auto;">
                 <div class="video-box">
-                    <h3>Live Object Detection</h3>
-                    <video id="input-video" autoplay muted playsinline style="display:none;"></video>
-                    <canvas id="input-canvas" width="640" height="480"></canvas>
+                    <h3 id="model-title" class="trained-label">✅ Trained Ultralytics (yolo11n_320.onnx)</h3>
+                    <div style="position: relative;">
+                        <canvas id="detection-canvas" width="640" height="480"></canvas>
+                        <div class="fps-counter" id="current-fps">0 FPS</div>
+                        <div class="model-indicator trained-indicator" id="model-badge">ULTRALYTICS</div>
+                    </div>
                     <div class="video-stats">
-                        <div class="video-stat">
-                            <span class="video-stat-label">Current FPS:</span>
-                            <span class="video-stat-value" id="current-fps">-</span>
-                        </div>
                         <div class="video-stat">
                             <span class="video-stat-label">Inference Time:</span>
                             <span class="video-stat-value" id="inference-time">-</span>
                         </div>
                         <div class="video-stat">
-                            <span class="video-stat-label">Objects Detected:</span>
+                            <span class="video-stat-label" id="detection-label">Objects Detected:</span>
                             <span class="video-stat-value" id="objects-detected">0</span>
+                        </div>
+                        <div class="video-stat">
+                            <span class="video-stat-label">Confidence Avg:</span>
+                            <span class="video-stat-value" id="confidence-avg">-</span>
                         </div>
                         <div class="video-stat">
                             <span class="video-stat-label">Frames Processed:</span>
                             <span class="video-stat-value" id="frames-processed">0</span>
                         </div>
-                        <div class="video-stat">
-                            <span class="video-stat-label">Backend:</span>
-                            <span class="video-stat-value" id="current-backend">-</span>
-                        </div>
                     </div>
                 </div>
             </div>
+
+            <video id="input-video" autoplay muted playsinline style="display:none;"></video>
         </div>
 
         <div class="video-section">
             <h2>📊 Performance Benchmark</h2>
             <p style="color: #6c757d; margin-bottom: 20px;">
-                Run a detailed benchmark to compare WebGPU vs WASM performance over 50 iterations.
+                Compare performance of Ultralytics vs PyTensor models on WebGPU and WASM backends (50 iterations each).
             </p>
 
-            <div class="comparison-grid">
-                <div class="backend-card" id="webgpu-card">
-                    <h2>🚀 WebGPU (GPU)</h2>
-                    <div class="status loading" id="webgpu-status">Checking...</div>
-                    <div class="metric">
-                        <span class="metric-label">Average Time</span>
-                        <span class="metric-value" id="webgpu-avg">-</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Min Time</span>
-                        <span class="metric-value" id="webgpu-min">-</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Max Time</span>
-                        <span class="metric-value" id="webgpu-max">-</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Throughput</span>
-                        <span class="metric-value" id="webgpu-fps">-</span>
-                    </div>
-                </div>
-
-                <div class="backend-card" id="wasm-card">
-                    <h2>🔧 WASM (CPU)</h2>
-                    <div class="status loading" id="wasm-status">Checking...</div>
-                    <div class="metric">
-                        <span class="metric-label">Average Time</span>
-                        <span class="metric-value" id="wasm-avg">-</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Min Time</span>
-                        <span class="metric-value" id="wasm-min">-</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Max Time</span>
-                        <span class="metric-value" id="wasm-max">-</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Throughput</span>
-                        <span class="metric-value" id="wasm-fps">-</span>
-                    </div>
-                </div>
-            </div>
+            <table class="benchmark-table">
+                <thead>
+                    <tr>
+                        <th class="backend-header">Backend</th>
+                        <th>✅ Ultralytics (Trained)</th>
+                        <th>❌ PyTensor (Untrained)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th class="backend-header">🚀 WebGPU</th>
+                        <td class="benchmark-cell" id="webgpu-ultralytics">
+                            <h3>WebGPU + Ultralytics</h3>
+                            <div class="status" id="webgpu-ultralytics-status">Not tested</div>
+                            <div class="metric">
+                                <span class="metric-label">Average</span>
+                                <span class="metric-value" id="webgpu-ultralytics-avg">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Min/Max</span>
+                                <span class="metric-value" id="webgpu-ultralytics-range">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">FPS</span>
+                                <span class="metric-value" id="webgpu-ultralytics-fps">-</span>
+                            </div>
+                        </td>
+                        <td class="benchmark-cell" id="webgpu-pytensor">
+                            <h3>WebGPU + PyTensor</h3>
+                            <div class="status" id="webgpu-pytensor-status">Not tested</div>
+                            <div class="metric">
+                                <span class="metric-label">Average</span>
+                                <span class="metric-value" id="webgpu-pytensor-avg">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Min/Max</span>
+                                <span class="metric-value" id="webgpu-pytensor-range">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">FPS</span>
+                                <span class="metric-value" id="webgpu-pytensor-fps">-</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="backend-header">🔧 WASM</th>
+                        <td class="benchmark-cell" id="wasm-ultralytics">
+                            <h3>WASM + Ultralytics</h3>
+                            <div class="status" id="wasm-ultralytics-status">Not tested</div>
+                            <div class="metric">
+                                <span class="metric-label">Average</span>
+                                <span class="metric-value" id="wasm-ultralytics-avg">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Min/Max</span>
+                                <span class="metric-value" id="wasm-ultralytics-range">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">FPS</span>
+                                <span class="metric-value" id="wasm-ultralytics-fps">-</span>
+                            </div>
+                        </td>
+                        <td class="benchmark-cell" id="wasm-pytensor">
+                            <h3>WASM + PyTensor</h3>
+                            <div class="status" id="wasm-pytensor-status">Not tested</div>
+                            <div class="metric">
+                                <span class="metric-label">Average</span>
+                                <span class="metric-value" id="wasm-pytensor-avg">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Min/Max</span>
+                                <span class="metric-value" id="wasm-pytensor-range">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">FPS</span>
+                                <span class="metric-value" id="wasm-pytensor-fps">-</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
 
             <div id="speedup-display" style="display:none;" class="speedup">
-                <div class="speedup-label">WebGPU Speedup</div>
+                <div class="speedup-label">Fastest Configuration</div>
                 <div class="speedup-value" id="speedup-value">-</div>
-                <div class="speedup-label">times faster than WASM</div>
+                <div class="speedup-label" id="speedup-description">-</div>
             </div>
 
             <div class="button-group">
-                <button id="benchmark-button" onclick="runComparison()" disabled>Run Benchmark (50 iterations)</button>
+                <button id="benchmark-button" onclick="runComparison()">Run Full Benchmark (4×50 iterations)</button>
             </div>
         </div>
 
@@ -387,15 +495,21 @@
 
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/ort.min.js"></script>
     <script>
-        let webgpuSession = null;
-        let wasmSession = null;
+        // Model sessions
+        let trainedSession = null;
+        let untrainedSession = null;
+
+        // Benchmark sessions - 4 combinations
+        let webgpuUltralyticsSession = null;
+        let webgpuPytensorSession = null;
+        let wasmUltralyticsSession = null;
+        let wasmPytensorSession = null;
+
         let testInput = null;
 
         // Video processing variables
         let videoStream = null;
         let videoElement = null;
-        let canvasElement = null;
-        let canvasCtx = null;
         let isProcessing = false;
         let frameCount = 0;
         let fpsHistory = [];
@@ -425,10 +539,12 @@
             output.scrollTop = output.scrollHeight;
         }
 
-        function updateStatus(backend, status, message) {
-            const statusEl = document.getElementById(`${backend}-status`);
-            statusEl.className = `status ${status}`;
-            statusEl.textContent = message;
+        function updateCellStatus(cellId, status, message) {
+            const statusEl = document.getElementById(`${cellId}-status`);
+            if (statusEl) {
+                statusEl.className = `status ${status}`;
+                statusEl.textContent = message;
+            }
         }
 
         function createTestInput() {
@@ -441,7 +557,7 @@
         }
 
         async function initializeBackends() {
-            log('=== Initializing Backends ===\n');
+            log('=== Initializing Models ===\n');
 
             // Create test input
             testInput = createTestInput();
@@ -460,73 +576,114 @@
                     log(`  Warning: Could not query GPU details: ${e.message}`);
                 }
             } else {
-                log('✗ WebGPU API not available');
+                log('✗ WebGPU API not available - falling back to WASM');
             }
 
-            // Try loading WebGPU session
+            // Load trained Ultralytics model (yolo11n_320.onnx)
             try {
-                updateStatus('webgpu', 'loading', 'Loading...');
-                log('\nLoading WebGPU session...');
-
-                webgpuSession = await ort.InferenceSession.create('yolo11n_320.onnx', {
-                    executionProviders: ['webgpu']
+                log('\nLoading TRAINED Ultralytics model (yolo11n_320.onnx)...');
+                trainedSession = await ort.InferenceSession.create('yolo11n_320.onnx', {
+                    executionProviders: navigator.gpu ? ['webgpu', 'wasm'] : ['wasm']
                 });
 
-                // Verify it's actually using WebGPU
-                log('✓ WebGPU session created successfully');
+                log('✓ Ultralytics model loaded successfully');
 
                 // Warmup
                 log('  Running warmup...');
-                const inputName = webgpuSession.inputNames[0];
+                const inputName = trainedSession.inputNames[0];
                 const testInputs = {};
                 testInputs[inputName] = testInput;
-                await webgpuSession.run(testInputs);
-
-                updateStatus('webgpu', 'ready', '✓ Ready');
-                log('✓ WebGPU session ready\n');
+                await trainedSession.run(testInputs);
+                log('✓ Ultralytics model ready\n');
 
             } catch (error) {
-                log(`✗ WebGPU failed: ${error.message}`);
-                updateStatus('webgpu', 'error', '✗ Failed');
-                console.error('WebGPU error:', error);
+                log(`✗ Ultralytics model failed: ${error.message}`);
+                console.error('Ultralytics model error:', error);
             }
 
-            // Try loading WASM session
+            // Load untrained PyTensor ONNX model (yolo11n.onnx)
             try {
-                updateStatus('wasm', 'loading', 'Loading...');
-                log('Loading WASM session...');
+                log('Loading UNTRAINED PyTensor ONNX model (yolo11n.onnx)...');
+                untrainedSession = await ort.InferenceSession.create('yolo11n.onnx', {
+                    executionProviders: navigator.gpu ? ['webgpu', 'wasm'] : ['wasm']
+                });
 
-                wasmSession = await ort.InferenceSession.create('yolo11n_320.onnx', {
+                log('✓ PyTensor ONNX model loaded successfully');
+
+                // Warmup
+                log('  Running warmup...');
+                const inputName = untrainedSession.inputNames[0];
+                const testInputs = {};
+                testInputs[inputName] = testInput;
+                await untrainedSession.run(testInputs);
+                log('✓ PyTensor ONNX model ready\n');
+
+            } catch (error) {
+                log(`✗ PyTensor ONNX model failed: ${error.message}`);
+                console.error('PyTensor ONNX model error:', error);
+            }
+
+            // Load benchmark sessions - 4 combinations
+            log('\n=== Loading Benchmark Sessions ===');
+
+            // WebGPU + Ultralytics
+            if (navigator.gpu) {
+                try {
+                    log('Loading WebGPU + Ultralytics...');
+                    webgpuUltralyticsSession = await ort.InferenceSession.create('yolo11n_320.onnx', {
+                        executionProviders: ['webgpu']
+                    });
+                    log('✓ WebGPU + Ultralytics ready');
+                } catch (error) {
+                    log(`✗ WebGPU + Ultralytics failed: ${error.message}`);
+                }
+
+                // WebGPU + PyTensor
+                try {
+                    log('Loading WebGPU + PyTensor...');
+                    webgpuPytensorSession = await ort.InferenceSession.create('yolo11n.onnx', {
+                        executionProviders: ['webgpu']
+                    });
+                    log('✓ WebGPU + PyTensor ready');
+                } catch (error) {
+                    log(`✗ WebGPU + PyTensor failed: ${error.message}`);
+                }
+            }
+
+            // WASM + Ultralytics
+            try {
+                log('Loading WASM + Ultralytics...');
+                wasmUltralyticsSession = await ort.InferenceSession.create('yolo11n_320.onnx', {
                     executionProviders: ['wasm']
                 });
-
-                log('✓ WASM session created successfully');
-
-                // Warmup
-                log('  Running warmup...');
-                const inputName = wasmSession.inputNames[0];
-                const testInputs = {};
-                testInputs[inputName] = testInput;
-                await wasmSession.run(testInputs);
-
-                updateStatus('wasm', 'ready', '✓ Ready');
-                log('✓ WASM session ready\n');
-
+                log('✓ WASM + Ultralytics ready');
             } catch (error) {
-                log(`✗ WASM failed: ${error.message}`);
-                updateStatus('wasm', 'error', '✗ Failed');
-                console.error('WASM error:', error);
+                log(`✗ WASM + Ultralytics failed: ${error.message}`);
             }
 
-            // Enable benchmark button if at least one backend is ready
-            if (webgpuSession || wasmSession) {
-                document.getElementById('benchmark-button').disabled = false;
+            // WASM + PyTensor
+            try {
+                log('Loading WASM + PyTensor...');
+                wasmPytensorSession = await ort.InferenceSession.create('yolo11n.onnx', {
+                    executionProviders: ['wasm']
+                });
+                log('✓ WASM + PyTensor ready');
+            } catch (error) {
+                log(`✗ WASM + PyTensor failed: ${error.message}`);
+            }
+
+            // Enable buttons if models are ready
+            if (trainedSession && untrainedSession) {
                 document.getElementById('webcam-button').disabled = false;
                 document.getElementById('upload-button').disabled = false;
-                document.getElementById('backend-select').disabled = false;
-                log('Ready to benchmark!');
-            } else {
-                log('\n✗ No backends available for benchmarking');
+                log('\n✓ Models ready for webcam demo!');
+            }
+
+            // Enable benchmark if any session is ready
+            if (webgpuUltralyticsSession || webgpuPytensorSession ||
+                wasmUltralyticsSession || wasmPytensorSession) {
+                document.getElementById('benchmark-button').disabled = false;
+                log('✓ Ready to run benchmarks!');
             }
         }
 
@@ -567,52 +724,116 @@
             const button = document.getElementById('benchmark-button');
             button.disabled = true;
 
+            // Clear previous winner classes
+            document.querySelectorAll('.benchmark-cell').forEach(cell => {
+                cell.classList.remove('winner');
+            });
+
             try {
                 log('\n========================================');
-                log('Starting Performance Comparison');
+                log('Starting 4-Way Performance Comparison');
                 log('========================================');
 
-                let webgpuResults = null;
-                let wasmResults = null;
+                const results = {};
 
-                // Benchmark WebGPU
-                if (webgpuSession) {
-                    document.getElementById('webgpu-card').classList.add('active');
-                    webgpuResults = await benchmarkBackend(webgpuSession, 'WebGPU', 50);
-                    document.getElementById('webgpu-avg').textContent = `${webgpuResults.avg.toFixed(2)}ms`;
-                    document.getElementById('webgpu-min').textContent = `${webgpuResults.min.toFixed(2)}ms`;
-                    document.getElementById('webgpu-max').textContent = `${webgpuResults.max.toFixed(2)}ms`;
-                    document.getElementById('webgpu-fps').textContent = `${webgpuResults.fps.toFixed(1)} FPS`;
-                    document.getElementById('webgpu-card').classList.remove('active');
+                // Benchmark WebGPU + Ultralytics
+                if (webgpuUltralyticsSession) {
+                    const cellId = 'webgpu-ultralytics';
+                    document.getElementById(cellId).classList.add('active');
+                    updateCellStatus(cellId, 'loading', 'Testing...');
+
+                    const result = await benchmarkBackend(webgpuUltralyticsSession, 'WebGPU + Ultralytics', 50);
+                    results[cellId] = result;
+
+                    document.getElementById(`${cellId}-avg`).textContent = `${result.avg.toFixed(2)}ms`;
+                    document.getElementById(`${cellId}-range`).textContent = `${result.min.toFixed(1)} - ${result.max.toFixed(1)}ms`;
+                    document.getElementById(`${cellId}-fps`).textContent = `${result.fps.toFixed(1)} FPS`;
+                    updateCellStatus(cellId, 'ready', '✓ Tested');
+                    document.getElementById(cellId).classList.remove('active');
                 }
 
-                // Benchmark WASM
-                if (wasmSession) {
-                    document.getElementById('wasm-card').classList.add('active');
-                    wasmResults = await benchmarkBackend(wasmSession, 'WASM', 50);
-                    document.getElementById('wasm-avg').textContent = `${wasmResults.avg.toFixed(2)}ms`;
-                    document.getElementById('wasm-min').textContent = `${wasmResults.min.toFixed(2)}ms`;
-                    document.getElementById('wasm-max').textContent = `${wasmResults.max.toFixed(2)}ms`;
-                    document.getElementById('wasm-fps').textContent = `${wasmResults.fps.toFixed(1)} FPS`;
-                    document.getElementById('wasm-card').classList.remove('active');
+                // Benchmark WebGPU + PyTensor
+                if (webgpuPytensorSession) {
+                    const cellId = 'webgpu-pytensor';
+                    document.getElementById(cellId).classList.add('active');
+                    updateCellStatus(cellId, 'loading', 'Testing...');
+
+                    const result = await benchmarkBackend(webgpuPytensorSession, 'WebGPU + PyTensor', 50);
+                    results[cellId] = result;
+
+                    document.getElementById(`${cellId}-avg`).textContent = `${result.avg.toFixed(2)}ms`;
+                    document.getElementById(`${cellId}-range`).textContent = `${result.min.toFixed(1)} - ${result.max.toFixed(1)}ms`;
+                    document.getElementById(`${cellId}-fps`).textContent = `${result.fps.toFixed(1)} FPS`;
+                    updateCellStatus(cellId, 'ready', '✓ Tested');
+                    document.getElementById(cellId).classList.remove('active');
                 }
 
-                // Calculate speedup
-                if (webgpuResults && wasmResults) {
-                    const speedup = wasmResults.avg / webgpuResults.avg;
-                    log(`\n========================================`);
-                    log(`🏆 SPEEDUP: ${speedup.toFixed(2)}x`);
-                    log(`========================================`);
-                    log(`WebGPU is ${speedup.toFixed(2)}x faster than WASM!`);
+                // Benchmark WASM + Ultralytics
+                if (wasmUltralyticsSession) {
+                    const cellId = 'wasm-ultralytics';
+                    document.getElementById(cellId).classList.add('active');
+                    updateCellStatus(cellId, 'loading', 'Testing...');
 
-                    document.getElementById('speedup-value').textContent = `${speedup.toFixed(2)}x`;
-                    document.getElementById('speedup-display').style.display = 'block';
+                    const result = await benchmarkBackend(wasmUltralyticsSession, 'WASM + Ultralytics', 50);
+                    results[cellId] = result;
 
-                    // Highlight winner
-                    if (speedup > 1) {
-                        document.getElementById('webgpu-card').innerHTML += '<div class="winner">🏆 Winner!</div>';
-                    } else {
-                        document.getElementById('wasm-card').innerHTML += '<div class="winner">🏆 Winner!</div>';
+                    document.getElementById(`${cellId}-avg`).textContent = `${result.avg.toFixed(2)}ms`;
+                    document.getElementById(`${cellId}-range`).textContent = `${result.min.toFixed(1)} - ${result.max.toFixed(1)}ms`;
+                    document.getElementById(`${cellId}-fps`).textContent = `${result.fps.toFixed(1)} FPS`;
+                    updateCellStatus(cellId, 'ready', '✓ Tested');
+                    document.getElementById(cellId).classList.remove('active');
+                }
+
+                // Benchmark WASM + PyTensor
+                if (wasmPytensorSession) {
+                    const cellId = 'wasm-pytensor';
+                    document.getElementById(cellId).classList.add('active');
+                    updateCellStatus(cellId, 'loading', 'Testing...');
+
+                    const result = await benchmarkBackend(wasmPytensorSession, 'WASM + PyTensor', 50);
+                    results[cellId] = result;
+
+                    document.getElementById(`${cellId}-avg`).textContent = `${result.avg.toFixed(2)}ms`;
+                    document.getElementById(`${cellId}-range`).textContent = `${result.min.toFixed(1)} - ${result.max.toFixed(1)}ms`;
+                    document.getElementById(`${cellId}-fps`).textContent = `${result.fps.toFixed(1)} FPS`;
+                    updateCellStatus(cellId, 'ready', '✓ Tested');
+                    document.getElementById(cellId).classList.remove('active');
+                }
+
+                // Find the winner (lowest average time)
+                if (Object.keys(results).length > 0) {
+                    let winner = null;
+                    let minAvg = Infinity;
+                    let maxAvg = 0;
+
+                    for (const [key, result] of Object.entries(results)) {
+                        if (result.avg < minAvg) {
+                            minAvg = result.avg;
+                            winner = key;
+                        }
+                        if (result.avg > maxAvg) {
+                            maxAvg = result.avg;
+                        }
+                    }
+
+                    if (winner) {
+                        document.getElementById(winner).classList.add('winner');
+                        const speedup = maxAvg / minAvg;
+
+                        // Display winner info
+                        const winnerName = winner.replace('-', ' + ').replace(/(\w)(\w*)/g,
+                            (g0, g1, g2) => g1.toUpperCase() + g2);
+
+                        document.getElementById('speedup-value').textContent = winnerName;
+                        document.getElementById('speedup-description').textContent =
+                            `Up to ${speedup.toFixed(2)}x faster than slowest`;
+                        document.getElementById('speedup-display').style.display = 'block';
+
+                        log(`\n========================================`);
+                        log(`🏆 WINNER: ${winnerName}`);
+                        log(`Performance: ${minAvg.toFixed(2)}ms average`);
+                        log(`Up to ${speedup.toFixed(2)}x faster than slowest`);
+                        log(`========================================`);
                     }
                 }
 
@@ -692,6 +913,9 @@
             document.getElementById('webcam-button').disabled = false;
             document.getElementById('stop-video-button').disabled = true;
             document.getElementById('stop-video-button').style.display = 'none';
+
+            // Reset FPS display
+            document.getElementById('current-fps').textContent = '0 FPS';
 
             log('\n--- Video Stopped ---');
             log(`Total frames processed: ${frameCount}`);
@@ -861,8 +1085,10 @@
         async function processFrame() {
             if (!isProcessing || !videoElement) return;
 
-            const backend = document.getElementById('backend-select').value;
-            const session = backend === 'webgpu' ? webgpuSession : wasmSession;
+            // Get selected model
+            const modelSelect = document.getElementById('model-select');
+            const selectedModel = modelSelect.value;
+            const session = selectedModel === 'trained' ? trainedSession : untrainedSession;
 
             if (!session) {
                 animationId = requestAnimationFrame(processFrame);
@@ -883,19 +1109,31 @@
 
                 // Get output and parse detections
                 const output = results[session.outputNames[0]];
-                const detections = parseYOLOOutput(output);
 
-                // Debug: log detection info occasionally
-                if (frameCount % 60 === 0) {
-                    console.log(`Frame ${frameCount}: ${detections.length} detections`, detections.slice(0, 3));
-                }
+                // Use different thresholds for untrained model to show the chaos
+                const confidenceThreshold = selectedModel === 'untrained' ? 0.05 : 0.25;
+                const detections = parseYOLOOutput(output, confidenceThreshold);
 
-                // Update stats
+                // Update frame count
                 frameCount++;
+
+                // Draw results
+                const canvas = document.getElementById('detection-canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                // Draw with different style for untrained
+                if (selectedModel === 'untrained') {
+                    ctx.globalAlpha = 0.6; // Make boxes semi-transparent for untrained
+                }
+                drawBoundingBoxes(ctx, detections, canvas.width, canvas.height);
+                ctx.globalAlpha = 1.0;
+
+                // Update FPS
                 const fps = 1000 / inferenceTime;
                 fpsHistory.push(fps);
-                if (fpsHistory.length > 30) fpsHistory.shift(); // Keep last 30 frames
-
+                if (fpsHistory.length > 30) fpsHistory.shift();
                 const avgFps = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
 
                 // Update UI
@@ -903,20 +1141,20 @@
                 document.getElementById('inference-time').textContent = `${inferenceTime.toFixed(2)}ms`;
                 document.getElementById('objects-detected').textContent = detections.length;
                 document.getElementById('frames-processed').textContent = frameCount;
-                document.getElementById('current-backend').textContent = backend.toUpperCase();
 
-                // Draw frame to display canvas
-                canvasElement = document.getElementById('input-canvas');
-                canvasCtx = canvasElement.getContext('2d');
-                canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-                canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                // Calculate average confidence
+                if (detections.length > 0) {
+                    const avgConf = detections.reduce((sum, d) => sum + d.confidence, 0) / detections.length;
+                    document.getElementById('confidence-avg').textContent = `${(avgConf * 100).toFixed(1)}%`;
+                } else {
+                    document.getElementById('confidence-avg').textContent = '-';
+                }
 
-                // Draw bounding boxes
-                drawBoundingBoxes(canvasCtx, detections, canvasElement.width, canvasElement.height);
-
-                // Log detections if any found
-                if (detections.length > 0 && frameCount % 30 === 0) {
-                    log(`Frame ${frameCount}: Found ${detections.length} objects: ${detections.map(d => d.className).join(', ')}`);
+                // Log occasionally
+                if (frameCount % 60 === 0) {
+                    const modelName = selectedModel === 'trained' ? 'Ultralytics' : 'PyTensor';
+                    const itemType = selectedModel === 'trained' ? 'objects' : 'random boxes';
+                    log(`Frame ${frameCount}: ${modelName}: ${detections.length} ${itemType}`);
                 }
 
             } catch (error) {
@@ -932,12 +1170,49 @@
             isProcessing = true;
             frameCount = 0;
             fpsHistory = [];
+
+            // Update UI for selected model
+            onModelChange();
+
             processFrame();
+        }
+
+        // Model selection change handler
+        function onModelChange() {
+            const modelSelect = document.getElementById('model-select');
+            const selectedModel = modelSelect.value;
+
+            const modelTitle = document.getElementById('model-title');
+            const modelBadge = document.getElementById('model-badge');
+            const detectionLabel = document.getElementById('detection-label');
+            const canvas = document.getElementById('detection-canvas');
+
+            if (selectedModel === 'trained') {
+                modelTitle.className = 'trained-label';
+                modelTitle.innerHTML = '✅ Trained Ultralytics (yolo11n_320.onnx)';
+                modelBadge.className = 'model-indicator trained-indicator';
+                modelBadge.textContent = 'ULTRALYTICS';
+                detectionLabel.textContent = 'Objects Detected:';
+                canvas.className = '';
+            } else {
+                modelTitle.className = 'untrained-label';
+                modelTitle.innerHTML = '❌ Untrained PyTensor ONNX (yolo11n.onnx)';
+                modelBadge.className = 'model-indicator';
+                modelBadge.textContent = 'PYTENSOR (Random Weights)';
+                detectionLabel.textContent = 'Random Boxes:';
+                canvas.className = 'untrained-canvas';
+            }
+
+            // Reset FPS history when switching models
+            fpsHistory = [];
         }
 
         // Initialize on load
         window.addEventListener('load', () => {
             initializeBackends();
+
+            // Add event listener for model selection
+            document.getElementById('model-select').addEventListener('change', onModelChange);
         });
     </script>
 </body>
